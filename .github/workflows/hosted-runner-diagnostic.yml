@@ -1,0 +1,33 @@
+name: Hosted Runner Diagnostic
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/hosted-runner-diagnostic.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: hosted-runner-diagnostic-main
+  cancel-in-progress: false
+
+jobs:
+  runner-smoke:
+    name: Bare Ubuntu hosted-runner smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Prove runner allocation and shell execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "RUNNER_DIAGNOSTIC=STARTED"
+          echo "RUNNER_OS=$RUNNER_OS"
+          echo "RUNNER_ARCH=$RUNNER_ARCH"
+          echo "RUNNER_NAME=$RUNNER_NAME"
+          uname -a
+          date -u
+          echo "RUNNER_DIAGNOSTIC=SUCCESS"
