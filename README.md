@@ -33,6 +33,7 @@ ARQENVO 2.0 is a greenfield development. Its initial product objective is to rep
 - `docs/ARCHICAD_REFERENCE/WALL_GEOMETRY_REVERSE_ENGINEERING.md` — dossier-based wall, junction, composite-skin and opening findings.
 - `docs/GEOMETRY_BENCHMARKS/README.md` — kernel evaluation plan and acceptance tests.
 - `docs/GEOMETRY_BENCHMARKS/CANDIDATE_DESK_REVIEW_2026-11-07.md` — current candidate comparison; desk research only, not runtime results.
+- `benchmarks/kernel-spike/` — isolated brepjs + occt-wasm smoke/benchmark runner; not production application source.
 - `docs/ARCHITECTURE_DECISIONS/` — decisions and deferred choices.
 
 ## Current non-goals
