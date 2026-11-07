@@ -84,8 +84,9 @@ function makeCurvedWall(wall) {
 }
 
 function makeWallBox(wall, length) {
+  const baseElevation = wall.baseElevation ?? 0;
   return box(length, wall.thickness, wall.height, {
-    at: [length / 2, 0, wall.baseElevation + wall.height / 2]
+    at: [length / 2, 0, baseElevation + wall.height / 2]
   });
 }
 
@@ -311,7 +312,7 @@ await runCase("K12", async () => {
     item.opening.width,
     item.wall.thickness + 2,
     item.opening.height,
-    { at: [position, 0, item.opening.sillElevation + item.opening.height / 2] }
+    { at: [position, 0, (item.wall.baseElevation ?? 0) + item.opening.sillElevation + item.opening.height / 2] }
   );
   console.log("[K12] creating initial cutter");
   const initialTool = makeTool(item.opening.initialPositionAlongBaseline);
