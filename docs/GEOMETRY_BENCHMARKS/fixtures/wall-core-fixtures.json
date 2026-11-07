@@ -19,7 +19,16 @@
       "purpose": "Baseline profile extrusion and solid validity",
       "wall": {
         "id": "wall-k01",
-        "baseline": [[0, 0], [1000, 0]],
+        "baseline": [
+          [
+            0,
+            0
+          ],
+          [
+            1000,
+            0
+          ]
+        ],
         "referenceLine": "center",
         "thickness": 200,
         "baseElevation": 0,
@@ -27,7 +36,11 @@
       },
       "expected": {
         "closedSolid": true,
-        "boundingDimensions": [1000, 200, 3000],
+        "boundingDimensions": [
+          1000,
+          200,
+          3000
+        ],
         "volumeMm3": 600000000
       }
     },
@@ -38,7 +51,16 @@
       "walls": [
         {
           "id": "wall-k03-a",
-          "baseline": [[0, 0], [3000, 0]],
+          "baseline": [
+            [
+              0,
+              0
+            ],
+            [
+              3000,
+              0
+            ]
+          ],
           "referenceLine": "center",
           "thickness": 200,
           "baseElevation": 0,
@@ -46,7 +68,16 @@
         },
         {
           "id": "wall-k03-b",
-          "baseline": [[3000, 0], [3000, 2000]],
+          "baseline": [
+            [
+              3000,
+              0
+            ],
+            [
+              3000,
+              2000
+            ]
+          ],
           "referenceLine": "center",
           "thickness": 200,
           "baseElevation": 0,
@@ -61,8 +92,42 @@
       "expected": {
         "closedSolidOrValidSolidSet": true,
         "noUnintendedGapAtJunction": true,
-        "noDuplicateInternalFacesInMergedResult": true
-      }
+        "noDuplicateInternalFacesInMergedResult": true,
+        "volumeMm3": 2970000000,
+        "boundingDimensions": [
+          3100,
+          2100,
+          3000
+        ]
+      },
+      "solidConstruction": [
+        {
+          "wallId": "wall-k03-a",
+          "boxMin": [
+            0,
+            -100,
+            0
+          ],
+          "boxMax": [
+            3000,
+            100,
+            3000
+          ]
+        },
+        {
+          "wallId": "wall-k03-b",
+          "boxMin": [
+            2900,
+            0,
+            0
+          ],
+          "boxMax": [
+            3100,
+            2000,
+            3000
+          ]
+        }
+      ]
     },
     {
       "id": "K06",
@@ -70,7 +135,16 @@
       "purpose": "Independent skin solids, ordering and material identity",
       "wall": {
         "id": "wall-k06",
-        "baseline": [[0, 0], [1000, 0]],
+        "baseline": [
+          [
+            0,
+            0
+          ],
+          [
+            1000,
+            0
+          ]
+        ],
         "referenceLine": "center",
         "thickness": 200,
         "baseElevation": 0,
@@ -98,8 +172,16 @@
       ],
       "expected": {
         "skinCount": 3,
-        "skinThicknesses": [20, 160, 20],
-        "skinVolumesMm3": [60000000, 480000000, 60000000],
+        "skinThicknesses": [
+          20,
+          160,
+          20
+        ],
+        "skinVolumesMm3": [
+          60000000,
+          480000000,
+          60000000
+        ],
         "totalVolumeMm3": 600000000,
         "skinOrderPreserved": true,
         "materialIdentityPreserved": true
@@ -111,7 +193,16 @@
       "purpose": "Boolean cut through all composite skins and analytic volume check",
       "wall": {
         "id": "wall-k07",
-        "baseline": [[0, 0], [1000, 0]],
+        "baseline": [
+          [
+            0,
+            0
+          ],
+          [
+            1000,
+            0
+          ]
+        ],
         "referenceLine": "center",
         "thickness": 200,
         "baseElevation": 0,
@@ -145,13 +236,18 @@
         "height": 2100,
         "sillElevation": 0,
         "cutDepth": "through-all-skins",
-        "cutToolMustExtendBeyondHostFaces": true
+        "cutToolMustExtendBeyondHostFaces": true,
+        "cutToolOverrunMm": 1
       },
       "expected": {
         "openingWidth": 900,
         "openingHeight": 2100,
         "cutThroughAllSkins": true,
-        "remainingSkinVolumesMm3": [22200000, 177600000, 22200000],
+        "remainingSkinVolumesMm3": [
+          22200000,
+          177600000,
+          22200000
+        ],
         "remainingTotalVolumeMm3": 222000000,
         "validClosedResult": true
       }
