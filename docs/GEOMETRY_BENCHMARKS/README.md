@@ -12,7 +12,7 @@
 
 - [First Runtime Benchmark Report — 2026-11-07](./FIRST_RUNTIME_BENCHMARK_REPORT_2026-11-07.md) records the initial baseline and the later Run #37 evidence.
 - [Candidate Desk Review — 2026-11-07](./CANDIDATE_DESK_REVIEW_2026-11-07.md) records source-backed candidate findings and the prototype order, not a production decision.
-- [Run #37](https://github.com/terajuciptabina-eng/Arqenvo-2.0/actions/runs/42359457979) is the current verification run for commit `ddb407f352331b3ab9f3ac1c804b2c92f188c446`. At the latest check, Manifold Ubuntu completed successfully; BRepJS Ubuntu was still running and the remaining jobs were queued. Do not treat queued or running jobs as results.
+- [Run #37](https://github.com/terajuciptabina-eng/Arqenvo-2.0/actions/runs/42359457979) is the current verification run for commit `ddb407f352331b3ab9f3ac1c804b2c92f188c446`. Run #37 is now terminal with conclusion `cancelled`: Manifold Ubuntu completed successfully, while all other jobs were cancelled. A partial BRepJS Ubuntu artifact exists and is independently STEP-import audited for K01/K03/K04/K05/K06/K07/K09; see the runtime report. Do not treat Run #37 as a full suite pass. Workflow concurrency was corrected in commit `cd4ac8b1e049d9920c18036b23afaa514ed56ec4`.
 
 ## Shared fixtures
 
