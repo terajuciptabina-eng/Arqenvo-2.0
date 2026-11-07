@@ -40,6 +40,11 @@ const restoredSnapshot = store.snapshot;
 let nextWallNumber = Math.max(0, ...Object.keys(restoredSnapshot.walls).map((id) => Number(id.match(/^wall-(\d+)$/)?.[1] ?? 0))) + 1;
 let nextOpeningNumber = Math.max(0, ...Object.keys(restoredSnapshot.openings).map((id) => Number(id.match(/^(?:door|window)-(\d+)$/)?.[1] ?? 0))) + 1;
 let nextCompositeNumber = Math.max(0, ...Object.keys(restoredSnapshot.composites).map((id) => Number(id.match(/^composite-(\d+)$/)?.[1] ?? 0))) + 1;
+function refreshElementCounters(project) {
+  nextWallNumber = Math.max(0, ...Object.keys(project.walls).map((id) => Number(id.match(/^wall-(\d+)$/)?.[1] ?? 0))) + 1;
+  nextOpeningNumber = Math.max(0, ...Object.keys(project.openings).map((id) => Number(id.match(/^(?:door|window)-(\d+)$/)?.[1] ?? 0))) + 1;
+  nextCompositeNumber = Math.max(0, ...Object.keys(project.composites).map((id) => Number(id.match(/^composite-(\d+)$/)?.[1] ?? 0))) + 1;
+}
 
 const setStatus = (message) => {
   statusText.textContent = message;
@@ -246,6 +251,33 @@ function updateInspector(project) {
   }
 }
 
+function exportProjectFile() {
+  const project = store.snapshot;
+  const blob = new Blob([JSON.stringify(project, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${project.id || "arqenvo-project"}.arqenvo.json`;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setStatus("Project export started");
+}
+
+async function importProjectFile(file) {
+  if (!file) return;
+  try {
+    const imported = JSON.parse(await file.text());
+    const result = store.replaceProject(imported, "Import project");
+    refreshElementCounters(store.snapshot);
+    selected = null;
+    await persistProject();
+    render();
+    setStatus(`Project imported · ${result.invalidatedElementIds.length} element(s) invalidated`);
+  } catch (error) {
+    setStatus(`Import failed · ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 function resize() {
   const rect = canvas.getBoundingClientRect();
   width = rect.width;
@@ -434,6 +466,9 @@ canvas.addEventListener("pointercancel", pointerUp);
 canvas.addEventListener("wheel", zoomAt, { passive: false });
 canvas.addEventListener("contextmenu", (event) => event.preventDefault());
 document.querySelector("#save-project").addEventListener("click", () => { void persistProject(); });
+document.querySelector("#export-project").addEventListener("click", exportProjectFile);
+document.querySelector("#import-project-button").addEventListener("click", () => document.querySelector("#import-project-file").click());
+document.querySelector("#import-project-file").addEventListener("change", (event) => { void importProjectFile(event.target.files?.[0]); event.target.value = ""; });
 window.addEventListener("keydown", (event) => {
   if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") { event.preventDefault(); if (store.undo()) { selected = null; void persistProject(); render(); setStatus("Undo completed"); } }

@@ -2,6 +2,7 @@ import { createServer } from "vite";
 import { webkit, devices } from "playwright";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readFile } from "node:fs/promises";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(here, "../..");
@@ -16,7 +17,7 @@ const failures = [];
 const results = [];
 
 async function exerciseProfile(profile) {
-  const context = await browser.newContext(profile.options);
+  const context = await browser.newContext({ ...profile.options, acceptDownloads: true });
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.stack ?? error.message));
@@ -98,6 +99,18 @@ async function exerciseProfile(profile) {
       }
     }
 
+    const downloadPromise = page.waitForEvent("download");
+    await page.locator("#export-project").click();
+    const download = await downloadPromise;
+    const exportedPath = await download.path();
+    if (!download.suggestedFilename().endsWith(".arqenvo.json")) throw new Error("Project export filename is incorrect");
+    await page.locator("#import-project-button").click();
+    await page.locator("#import-project-file").setInputFiles({
+      name: "roundtrip.arqenvo.json",
+      mimeType: "application/json",
+      buffer: await readFile(exportedPath)
+    });
+    await page.waitForFunction(() => document.querySelector("#canvas-status")?.textContent?.includes("Project imported"));
     await page.locator("#save-project").click();
     await page.waitForFunction(() => document.querySelector("#canvas-status")?.textContent?.startsWith("Saved locally"));
     await page.reload();

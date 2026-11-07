@@ -56,3 +56,18 @@ test("editing an opening invalidates the host wall representation", () => {
   });
   assert.deepEqual(result.invalidatedElementIds, ["geometry:wall:w", "opening:d"]);
 });
+
+test("replacing a project validates before atomically committing and supports undo", () => {
+  const store = new ProjectStore(createProject({ id: "before" }));
+  const imported = createProject({ id: "imported" });
+  imported.walls.w = createWall({ id: "w", baseline: [[0, 0], [1500, 0]], thickness: 200, height: 3000 });
+  const result = store.replaceProject(imported, "Import project");
+  assert.equal(result.revision, 1);
+  assert.equal(store.snapshot.id, "imported");
+  assert.equal(store.snapshot.walls.w.id, "w");
+  assert.equal(store.undo(), true);
+  assert.equal(store.snapshot.id, "before");
+  assert.equal(store.snapshot.walls.w, undefined);
+  assert.throws(() => store.replaceProject({ schemaVersion: 99, id: "invalid" }), /Unsupported project schema/);
+  assert.equal(store.snapshot.id, "before");
+});

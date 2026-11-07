@@ -35,6 +35,25 @@ export class ProjectStore {
     return { revision: draft.revision, result, changedEntities, invalidatedElementIds: invalidated };
   }
 
+
+  replaceProject(project, label = "Replace project") {
+    validateProject(project);
+    const next = clone(project);
+    const changedEntities = changedProjectEntities(this.#state, next);
+    const previousGraph = buildProjectDependencyGraph(this.#state);
+    const nextGraph = buildProjectDependencyGraph(next);
+    const invalidatedElementIds = [...new Set([
+      ...previousGraph.invalidate(changedEntities),
+      ...nextGraph.invalidate(changedEntities)
+    ])].sort();
+    next.revision = Math.max(this.#state.revision, next.revision ?? 0) + 1;
+    validateProject(next);
+    this.#undo.push({ label, state: this.#state });
+    this.#redo = [];
+    this.#state = next;
+    return { revision: next.revision, changedEntities, invalidatedElementIds };
+  }
+
   undo() {
     const previous = this.#undo.pop();
     if (!previous) return false;
