@@ -56,10 +56,10 @@ These corrections changed the K03 and K07 outputs to exact analytic matches. The
 - **Manifold is a very fast mesh Boolean control.** It also matched K01, K03 and K07 analytic volumes, but it is not a replacement for an authoritative parametric B-Rep model. It remains relevant as a possible derived-mesh or secondary operation layer.
 - This report does not prove Archicad-equivalent wall junction behaviour. K03 supplies precomputed wall-end boundaries and tests only the solid union. BIM wall priority/trim logic remains outside the kernel test.
 - This report does not prove actual iPad Safari compatibility or performance.
-- No candidate has passed the complete K01–K15 plan, browser/device checks, topology inspection, or legal review.
+- No candidate has passed the complete K01–K15 plan, physical-device Safari checks, topology inspection, or legal review.
 
 
-## 7. Browser WebKit smoke test
+## 6. Browser WebKit smoke test
 
 The BRepJS + OCCT-WASM browser smoke test also passed in GitHub Actions on macOS arm64 using Playwright WebKit 27.2, Node 24.22.2, Vite 8.3.6 and Playwright 1.65.0.
 
@@ -74,7 +74,7 @@ Both profiles reported no browser errors, console errors or failed requests.
 
 This is a Playwright WebKit build with an iPad-like emulation profile. It is not Apple's installed Safari and does not replace testing on a physical iPad/iPhone.
 
-## 8. Remaining candidate work and selection gate
+## 7. Remaining candidate work and selection gate
 
 | Candidate | Next action | Status |
 |---|---|---|
