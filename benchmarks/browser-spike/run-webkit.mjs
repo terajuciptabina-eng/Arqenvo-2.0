@@ -31,21 +31,46 @@ try {
     const context = await browser.newContext(profile.options);
     const page = await context.newPage();
     const browserErrors = [];
-    page.on("pageerror", (error) => browserErrors.push(error.message));
+    const consoleMessages = [];
+    const failedRequests = [];
+    page.on("pageerror", (error) => browserErrors.push(error.stack ?? error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") consoleMessages.push(message.text());
+    });
+    page.on("requestfailed", (request) => failedRequests.push({
+      url: request.url(),
+      error: request.failure()?.errorText ?? "unknown"
+    }));
     const started = performance.now();
-    await page.goto("http://127.0.0.1:4173/", { waitUntil: "load", timeout: 30000 });
-    await page.waitForFunction(() => window.__geometryBenchmark?.status, undefined, { timeout: 30000 });
-    const result = await page.evaluate(() => window.__geometryBenchmark);
-    const elapsedMilliseconds = performance.now() - started;
-    const record = {
-      profile: profile.name,
-      pageElapsedMilliseconds: elapsedMilliseconds,
-      browserErrors,
-      ...result
-    };
-    results.push(record);
-    if (result.status !== "pass" || browserErrors.length > 0) {
-      failures.push({ profile: profile.name, error: browserErrors.join("; ") || "Analytic volume mismatch" });
+    try {
+      await page.goto("http://127.0.0.1:4173/", { waitUntil: "load", timeout: 30000 });
+      await page.waitForFunction(() => window.__geometryBenchmark?.status, undefined, { timeout: 15000 });
+      const result = await page.evaluate(() => window.__geometryBenchmark);
+      const elapsedMilliseconds = performance.now() - started;
+      results.push({
+        profile: profile.name,
+        pageElapsedMilliseconds: elapsedMilliseconds,
+        browserErrors,
+        consoleMessages,
+        failedRequests,
+        ...result
+      });
+      if (result.status !== "pass" || browserErrors.length > 0) {
+        failures.push({ profile: profile.name, error: browserErrors.join("; ") || "Analytic volume mismatch" });
+      }
+    } catch (error) {
+      const bodyText = await page.locator("body").innerText().catch(() => "");
+      const screenshotPath = resolve(outputDir, `${profile.name}-failure.png`);
+      await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => {});
+      failures.push({
+        profile: profile.name,
+        error: error instanceof Error ? error.stack ?? error.message : String(error),
+        browserErrors,
+        consoleMessages,
+        failedRequests,
+        bodyText,
+        screenshotPath
+      });
     }
     await context.close();
   }
