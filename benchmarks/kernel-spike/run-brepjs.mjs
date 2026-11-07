@@ -135,7 +135,7 @@ await runCase("K07", async () => {
   const cutTool = box(
     opening.width,
     wall.thickness + 2 * overrun,
-    opening.height + 2 * overrun,
+    opening.height,
     {
       at: [
         opening.hostPositionAlongBaseline,
