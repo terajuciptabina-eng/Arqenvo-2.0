@@ -33,6 +33,7 @@ const results = [];
 const failures = [];
 const selectedCase = process.env.CASE_FILTER ?? null;
 const skipCurvedCases = process.env.SKIP_CURVED_CASES === "1";
+const skippedCases = new Set((process.env.CASE_SKIP ?? "").split(",").map((value) => value.trim()).filter(Boolean));
 const memoryBeforeBytes = process.memoryUsage().rss;
 
 async function saveStep(shape, filename) {
@@ -44,6 +45,7 @@ async function saveStep(shape, filename) {
 
 async function runCase(id, fn) {
   if (selectedCase && selectedCase !== id) return;
+  if (skippedCases.has(id)) return;
   if (skipCurvedCases && (id === "K02" || id === "K10")) return;
   console.log(`[${id}] started`);
   const started = performance.now();
@@ -300,26 +302,55 @@ function stepGeometrySignature(bytes) {
 }
 
 await runCase("K12", async () => {
+  const mark = (label, started) => console.log(`[K12] ${label} ${(performance.now() - started).toFixed(2)} ms`);
+  const caseStarted = performance.now();
+  console.log("[K12] loading fixture");
   const item = getCase("K12");
   const length = item.wall.baseline[1][0] - item.wall.baseline[0][0];
+  console.log("[K12] creating host wall");
   const wall = makeWallBox(item.wall, length);
+  mark("host wall created", caseStarted);
   const makeTool = (position) => box(
     item.opening.width,
     item.wall.thickness + 2,
     item.opening.height,
     { at: [position, 0, item.opening.sillElevation + item.opening.height / 2] }
   );
-  const initial = unwrap(cut(wall, makeTool(item.opening.initialPositionAlongBaseline)));
-  const moved = unwrap(cut(wall, makeTool(item.opening.movedPositionAlongBaseline)));
-  const initialBytes = Buffer.from(await unwrap(exportSTEP(initial)).arrayBuffer());
-  const movedBytes = Buffer.from(await unwrap(exportSTEP(moved)).arrayBuffer());
+  console.log("[K12] creating initial cutter");
+  const initialTool = makeTool(item.opening.initialPositionAlongBaseline);
+  mark("initial cutter created", caseStarted);
+  console.log("[K12] executing initial Boolean cut");
+  const initial = unwrap(cut(wall, initialTool));
+  mark("initial Boolean cut completed", caseStarted);
+  console.log("[K12] measuring initial result");
+  const measuredInitialVolumeMm3 = volumeOf(initial);
+  mark("initial result measured", caseStarted);
+  console.log("[K12] creating moved cutter");
+  const movedTool = makeTool(item.opening.movedPositionAlongBaseline);
+  mark("moved cutter created", caseStarted);
+  console.log("[K12] executing moved Boolean cut against original host");
+  const moved = unwrap(cut(wall, movedTool));
+  mark("moved Boolean cut completed", caseStarted);
+  console.log("[K12] measuring moved result");
+  const measuredMovedVolumeMm3 = volumeOf(moved);
+  mark("moved result measured", caseStarted);
+  console.log("[K12] exporting initial STEP");
+  const initialBlob = unwrap(exportSTEP(initial));
+  mark("initial STEP export object created", caseStarted);
+  const initialBytes = Buffer.from(await initialBlob.arrayBuffer());
+  mark("initial STEP bytes materialized", caseStarted);
+  console.log("[K12] exporting moved STEP");
+  const movedBlob = unwrap(exportSTEP(moved));
+  mark("moved STEP export object created", caseStarted);
+  const movedBytes = Buffer.from(await movedBlob.arrayBuffer());
+  mark("moved STEP bytes materialized", caseStarted);
   const initialSignature = stepGeometrySignature(initialBytes);
   const movedSignature = stepGeometrySignature(movedBytes);
   return {
     expectedInitialVolumeMm3: item.expected.initialVolumeMm3,
-    measuredInitialVolumeMm3: volumeOf(initial),
+    measuredInitialVolumeMm3,
     expectedMovedVolumeMm3: item.expected.movedVolumeMm3,
-    measuredMovedVolumeMm3: volumeOf(moved),
+    measuredMovedVolumeMm3,
     initialGeometrySignature: initialSignature,
     movedGeometrySignature: movedSignature,
     movementGeometryChanged: initialSignature.pointCount > 0 &&
@@ -460,7 +491,7 @@ function buildValidation(caseResults) {
       pass: k15.stepFileContainsGeometry === true
     });
   }
-  const expectedIds = selectedCase ? [selectedCase] : fixtures.cases.filter((item) => item.id !== "K14" && !(skipCurvedCases && (item.id === "K02" || item.id === "K10"))).map((item) => item.id);
+  const expectedIds = selectedCase ? [selectedCase] : fixtures.cases.filter((item) => item.id !== "K14" && !skippedCases.has(item.id) && !(skipCurvedCases && (item.id === "K02" || item.id === "K10"))).map((item) => item.id);
   const missingCases = expectedIds.filter((id) => !byId.has(id) || byId.get(id).status !== "completed");
   return {
     status: checks.length > 0 && checks.every((check) => check.pass) && missingCases.length === 0 ? "pass" : "fail",
@@ -477,6 +508,7 @@ const report = {
   candidate: "brepjs + occt-wasm",
   selectedCase,
   skipCurvedCases,
+  skippedCases: [...skippedCases],
   candidateVersions,
   runtime: { node: process.versions.node, platform: process.platform, architecture: process.arch },
   initializationMilliseconds,
