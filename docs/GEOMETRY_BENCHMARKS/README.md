@@ -12,7 +12,7 @@
 
 ## Shared fixtures
 
-- `fixtures/wall-core-fixtures.json` — canonical, kernel-neutral analytic inputs for K01, K03, K06 and K07. All candidate spikes must consume these same fixtures and record the configured tolerance; do not modify fixtures per candidate.
+- `fixtures/wall-core-fixtures.json` — canonical, kernel-neutral analytic inputs for K01–K13 (excluding K14) and K15. K14 is the browser/device compatibility test. Each candidate must consume the same semantic fixtures; unsupported capabilities must be recorded as unsupported rather than silently approximated. All candidate spikes must consume these same fixtures and record the configured tolerance; do not modify fixtures per candidate.
 
 ## Current candidate review
 
@@ -43,21 +43,21 @@ Candidate availability, maturity, API, build instructions, browser support and l
 
 | ID | Scenario | What it tests |
 |---|---|---|
-| G01 | Straight wall prism | Profile extrusion and dimensions |
-| G02 | Curved wall | Curved path/profile handling |
-| G03 | L-junction | Intersections and corner cleanup |
-| G04 | T-junction | Multi-element intersection |
-| G05 | Cross-junction | Multi-way connection stability |
-| G06 | Thickness edit | Regeneration and numeric stability |
-| G07 | Single door opening | Through-opening and Boolean reliability |
-| G08 | Window opening | Opening placement and host relation |
-| G09 | Multiple openings | Repeated Boolean and topology validity |
-| G10 | Slab with hole | Profile with inner loop |
-| G11 | Roof-like solid | Sloped planar geometry |
-| G12 | Host modification | Recompute dependent geometry |
-| G13 | 2D/3D agreement | Shared dimensions and coordinate transforms |
-| G14 | Repeated edits | Stability after many modifications |
-| G15 | iPad Safari | Runtime compatibility and memory/performance |
+| K01 | Straight wall prism | Baseline dimensions, solid and volume |
+| K02 | Quarter-annular curved wall | Exact curved profile/revolve |
+| K03 | L-junction | Union after fixed wall-end solution |
+| K04 | T-junction | Multi-element Boolean union |
+| K05 | Cross-junction | Four-way orthogonal wall union |
+| K06 | Three-skin composite wall | Separate skin volumes and ordering |
+| K07 | Door through all skins | Hosted door cut through composite |
+| K08 | Window through all skins | Raised opening and sill retention |
+| K09 | Multiple doors | Multi-tool cut on one host |
+| K10 | Curved-wall opening | Angular opening in curved wall |
+| K11 | Wall thickness edit | Regeneration from changed parameters |
+| K12 | Opening moved on host | Rebuild after host/opening dependency change |
+| K13 | 100 repeated regenerations | Repeated edit stability and memory observation |
+| K14 | Browser/device compatibility | Desktop WebKit and iPad-like emulation; physical iPad Safari still required |
+| K15 | STEP round-trip | Export, import and volume comparison |
 
 ## Measurements
 
