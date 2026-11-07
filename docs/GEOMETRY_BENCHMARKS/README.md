@@ -10,9 +10,11 @@
 
 ## Current runtime evidence
 
-- [First Runtime Benchmark Report — 2026-11-07](./FIRST_RUNTIME_BENCHMARK_REPORT_2026-11-07.md) records the initial baseline and the later Run #37 evidence.
-- [Candidate Desk Review — 2026-11-07](./CANDIDATE_DESK_REVIEW_2026-11-07.md) records source-backed candidate findings and the prototype order, not a production decision.
-- [Run #37](https://github.com/terajuciptabina-eng/Arqenvo-2.0/actions/runs/42359457979) is the current verification run for commit `ddb407f352331b3ab9f3ac1c804b2c92f188c446`. Run #37 is now terminal with conclusion `cancelled`: Manifold Ubuntu completed successfully, while all other jobs were cancelled. A partial BRepJS Ubuntu artifact exists and is independently STEP-import audited for K01/K03/K04/K05/K06/K07/K09; see the runtime report. Do not treat Run #37 as a full suite pass. Workflow concurrency was corrected in commit `cd4ac8b1e049d9920c18036b23afaa514ed56ec4`.
+- [Geometry Kernel Benchmark Run #62](https://github.com/terajuciptabina-eng/Arqenvo-2.0/actions/runs/42383737199), commit 3038f019b92414a5f4781846703cc3ca61297384, completed with **11/11 jobs successful**. BRepJS + OCCT-WASM passed the full non-curved suite on Ubuntu and macOS; K02 and K10 passed in separate curved-geometry jobs.
+- K12 root cause: its fixture omitted wall.baseElevation while the wall generator used it directly in the Z coordinate, allowing NaN to propagate. The fixture now declares baseElevation 0; the generator and cutter default missing base elevation to zero. Initial and moved opening states use independent host solids. K12 now passes with different STEP geometry signatures and equal expected volumes.
+- Run #62 also passed Manifold on Ubuntu/macOS, BRepJS WebKit desktop and iPad-like emulation, the OpenGeometry 2.0.18 browser probe, and all three dependency-license inventory jobs. WebKit emulation is not a physical iPad Safari test; license inventory is not legal approval.
+- [First Runtime Benchmark Report — 2026-11-07](./FIRST_RUNTIME_BENCHMARK_REPORT_2026-11-07.md) records the full results and remaining evidence limits.
+- [Candidate Desk Review — 2026-11-07](./CANDIDATE_DESK_REVIEW_2026-11-07.md) records the current candidate comparison. **No production kernel is selected.**
 
 ## Shared fixtures
 

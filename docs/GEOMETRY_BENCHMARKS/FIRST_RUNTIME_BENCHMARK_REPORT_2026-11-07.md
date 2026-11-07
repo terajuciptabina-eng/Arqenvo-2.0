@@ -1,8 +1,8 @@
 # First Runtime Benchmark Report — 2026-11-07
 
-**Status:** Preliminary baseline only. No production kernel selected.  
+**Status:** Expanded hosted benchmark matrix passed; production kernel selection remains open.  
 **Earlier evidence:** The initial BRepJS/Manifold baselines are recorded below as historical run evidence. Their original runs are distinct from Run #37.  
-**Current verification:** [Geometry Kernel Benchmark Run #37](https://github.com/terajuciptabina-eng/Arqenvo-2.0/actions/runs/42359457979), commit `ddb407f352331b3ab9f3ac1c804b2c92f188c446`.
+**Current verification:** [Geometry Kernel Benchmark Run #62](https://github.com/terajuciptabina-eng/Arqenvo-2.0/actions/runs/42383737199), commit `3038f019b92414a5f4781846703cc3ca61297384` (11/11 jobs successful). Run #37 remains historical evidence.
 
 ## 1. Candidates and environment
 
@@ -27,7 +27,7 @@ These results are historical evidence from their cited runs; they must not be pr
 
 Manifold reported `NoError` for the tested mesh solids. BRepJS exported STEP files in its earlier benchmark. The earlier BRepJS suite did not establish complete independent topology inspection or architectural BIM solver parity.
 
-## 3. Run #37 — verified evidence as of 2026-11-07
+## 3. Historical Run #37 — partial evidence
 
 Run #37 was created from commit `ddb407f352331b3ab9f3ac1c804b2c92f188c446`.
 
@@ -125,14 +125,9 @@ K13 RSS sampling remains observational only: no forced garbage collection or con
 
 The workflow now includes a package-license inventory job for the pinned BRepJS/OCCT-WASM, Manifold and OpenGeometry dependency trees. It records package name/version, declared license metadata, repository metadata and top-level LICENSE/COPYING/NOTICE files. This is an inventory for legal review, not a legal opinion or approval; transitive license obligations, binary redistribution terms and hosted-service implications still require review.
 
-## 10. Next verification gate
+## 10. Remaining verification gate
 
-1. Inspect Run #37 rerun attempt 2 and the new full verification run triggered by commit `d274fd1`.
-2. Download and inspect every available BRepJS, curved, WebKit and OpenGeometry artifact.
-3. Verify the strengthened K12/K13 checks and K15 STEP geometry and round-trip values from actual job artifacts.
-4. Examine any failed case against the fixture and actual kernel output. Do not relax expected values to manufacture a pass.
-5. Update this report with terminal job conclusions and evidence links.
-6. Keep production kernel selection open pending full benchmark, device, performance, worker and licensing checks.
+The hosted geometry benchmark matrix is complete for Run #62. Remaining work before any production-kernel decision is independent topology/STEP inspection across the complete fixture set, application-level wall-priority and host-dependency tests, semantic material identity persistence, physical iPad Safari testing, controlled worker/performance/memory testing, and legal review of redistribution and hosted-service obligations. Do not treat the hosted prototype matrix as production certification.
 
 ## Run #37 artifact audit supplement (2026-11-07)
 
@@ -152,3 +147,47 @@ Each of the 11 STEP files was imported using an independent OCCT-based Python re
 This independently supports STEP readability, single-solid import and valid imported topology for those exported samples. It does not recover the missing benchmark report or establish K08/K11/K12/K13/K15 completion. It also does not prove ARQENVO BIM junction rules or semantic skin metadata.
 
 The workflow concurrency setting has since been corrected to `cancel-in-progress: false` in commit `cd4ac8b1e049d9920c18036b23afaa514ed56ec4`. That correction protects future runs but cannot restore jobs cancelled in Run #37.
+
+
+## 11. Run #62 — final hosted benchmark matrix (2026-11-07)
+
+[Run #62](https://github.com/terajuciptabina-eng/Arqenvo-2.0/actions/runs/42383737199), commit 3038f019b92414a5f4781846703cc3ca61297384, completed with **11/11 jobs successful**.
+
+### 11.1 BRepJS + OCCT-WASM full suite
+
+Both Ubuntu x64 and macOS arm64 benchmark reports have validation status pass and empty failure arrays. The main suite completed K01, K03–K09, K11–K13 and K15; K02 and K10 were run as separate curved-geometry jobs.
+
+K12 passed on both platforms:
+
+| Platform | K12 operation | Initial volume | Moved volume | Geometry changed |
+|---|---:|---:|---:|---|
+| Ubuntu x64 | 78.92 ms | 1,422,000,000 mm³ | 1,422,000,000 mm³ | Yes |
+| macOS arm64 | 19.41 ms | 1,422,000,000 mm³ | 1,422,000,000 mm³ | Yes |
+
+Both outputs have 51 STEP Cartesian points, different normalized geometry signatures, and zero volume delta from expected values. This verifies that the opening position changed rather than relying on equal volume alone.
+
+K13 completed 100 regenerations on both platforms, with all volume samples finite, two expected alternating volumes, and a final STEP export/import volume delta of zero. This is repeat-regeneration evidence, not a controlled memory-leak proof. K15 passed STEP export/import and geometry-content checks with zero volume delta.
+
+### 11.2 Curved geometry
+
+- K02 passed on macOS arm64: expected 942,477,796.0769379 mm³, measured 942,477,796.0769384 mm³, absolute delta approximately 0.000000477 mm³, fixture tolerance 0.1 mm³.
+- K10 passed on macOS arm64: expected 795,870,138.9094143 mm³, measured 795,870,138.9094145 mm³, absolute delta approximately 0.000000238 mm³, fixture tolerance 0.5 mm³.
+
+### 11.3 Other candidate and browser jobs
+
+- Manifold 3.5.4 passed K01, K03 and K07 on Ubuntu and macOS with exact fixture volume matches and no reported failures. It remains a mesh-kernel control, not an exact B-Rep replacement.
+- BRepJS WebKit desktop and iPad-like emulation both passed the 600,000,000 mm³ browser smoke test with no browser errors or failed requests. This does not certify physical iPad Safari.
+- OpenGeometry 2.0.18 browser probe passed its current single cuboid-subtraction test. Its volume observation is based on tessellated mesh geometry and does not establish parity with the full wall fixture matrix.
+- License inventories completed for BRepJS/OCCT-WASM, Manifold and OpenGeometry. These are inventories only, not legal approval.
+
+### 11.4 K12 root cause and correction
+
+The K12 fixture omitted wall.baseElevation. The BRepJS wall-box helper previously added that value directly to the wall vertical center; an omitted value could therefore propagate NaN into the generated host geometry. The K12 cutter also omitted the wall base elevation from its vertical placement.
+
+The correction adds baseElevation 0 to the K12 fixture, defaults a missing wall base elevation to zero in the shared wall-box helper, includes the wall base elevation in K12 cutter placement, and builds independent host solids for the initial and moved opening states.
+
+After correction, isolated K12 passed on Ubuntu and macOS, then passed again inside the complete BRepJS suite on both platforms. No tolerance was relaxed.
+
+### 11.5 Decision
+
+Run #62 closes the current hosted prototype benchmark and runner verification task. It does not select a production kernel. Remaining gates are application-level BIM wall junction/priority logic, host dependency behavior, material metadata persistence, physical iPad Safari, controlled worker/performance/memory tests, independent topology inspection, and qualified legal review.
