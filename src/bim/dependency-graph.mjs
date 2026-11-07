@@ -40,10 +40,12 @@ export class DependencyGraph {
 export function buildProjectDependencyGraph(project) {
   const graph = new DependencyGraph();
   for (const wall of Object.values(project.walls ?? {})) {
+    graph.addDependency(`wall:${wall.id}`, `geometry:wall:${wall.id}`);
     if (wall.compositeId) graph.addDependency(`composite:${wall.compositeId}`, `wall:${wall.id}`);
   }
   for (const opening of Object.values(project.openings ?? {})) {
     graph.addDependency(`wall:${opening.hostWallId}`, `opening:${opening.id}`);
+    graph.addDependency(`opening:${opening.id}`, `geometry:wall:${opening.hostWallId}`);
   }
   for (const junction of Object.values(project.junctions ?? {})) {
     const junctionKey = `junction:${junction.id}`;

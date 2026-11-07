@@ -62,6 +62,26 @@ async function exerciseProfile(profile) {
     await page.locator("#redo").click();
     await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("2 openings"));
 
+    if (profile.name === "webkit-desktop") {
+      await page.locator('[data-tool="select"]').click();
+      await page.mouse.click(bounds.x + bounds.width * 0.38, y);
+      await page.locator('input[name="thickness"]').fill("250");
+      await page.locator("#apply-element").click();
+      await page.waitForFunction(() => document.querySelector("#canvas-status")?.textContent?.includes("Updated wall") && document.querySelector("#canvas-status")?.textContent?.includes("invalidated"));
+      if (await page.locator('input[name="thickness"]').inputValue() !== "250") throw new Error("Wall thickness edit was not committed");
+
+      await page.locator('[data-tool="select"]').click();
+      await page.mouse.click(bounds.x + bounds.width * 0.46, y);
+      await page.locator('input[name="width"]').fill("850");
+      await page.locator("#apply-element").click();
+      if (await page.locator('input[name="width"]').inputValue() !== "850") throw new Error("Opening width edit was not committed");
+      await page.locator("#undo").click();
+      await page.locator('[data-tool="select"]').click();
+      await page.mouse.click(bounds.x + bounds.width * 0.46, y);
+      if (await page.locator('input[name="width"]').inputValue() !== "900") throw new Error("Opening edit undo did not restore width");
+      await page.locator("#redo").click();
+    }
+
     if (profile.name === "webkit-ipad-like") {
       const inspectorDisplay = await page.locator(".inspector").evaluate((node) => getComputedStyle(node).display);
       if (inspectorDisplay !== "none") throw new Error("Responsive inspector should collapse on iPad-like viewport");

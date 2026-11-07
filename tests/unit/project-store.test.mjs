@@ -43,5 +43,5 @@ test("changing a composite invalidates every wall that uses it", () => {
   const result = store.transact("change material identity", (draft) => {
     draft.composites.c = { ...draft.composites.c, skins: [{ ...draft.composites.c.skins[0], materialId: "stone" }], revision: 2 };
   });
-  assert.deepEqual(result.invalidatedElementIds, ["composite:c", "wall:a"]);
+  assert.deepEqual(result.invalidatedElementIds, ["composite:c", "geometry:wall:a", "wall:a"]);
 });

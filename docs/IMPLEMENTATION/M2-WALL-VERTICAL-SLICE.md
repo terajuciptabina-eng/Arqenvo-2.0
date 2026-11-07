@@ -13,7 +13,7 @@
 - L/angled miter-point plans and T-branch cap plans; cross intersections explicitly require a later solid-union operation.
 - Kernel adapter contract that keeps vendor-specific types outside the BIM domain.
 - Atomic project transactions with undo/redo.
-- Dependency graph: composite changes invalidate dependent walls; wall changes invalidate hosted openings and connected junction peers.
+- Dependency graph: composite changes invalidate dependent walls; wall changes invalidate hosted openings and connected junction peers; opening edits invalidate the host wall representation.
 - Node built-in unit tests and GitHub Actions CI.
 
 ## Evidence boundary

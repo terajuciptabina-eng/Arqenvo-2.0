@@ -11,7 +11,7 @@
 - Display wall outlines, composite skin boundaries and opening symbols in a 2D floor-plan canvas.
 - Zoom with the wheel/trackpad; pan with middle mouse, right mouse or Alt-drag.
 - Undo/redo and keyboard shortcuts 1–4, Escape, Ctrl/Cmd+Z and Ctrl/Cmd+Y.
-- Element inspector shows semantic wall/opening properties.
+- Element inspector edits wall thickness, height, base elevation and reference line; opening anchor, position, width, height and sill elevation. Changes commit as validated semantic transactions and invalidate dependent geometry.
 - All geometry is derived from the semantic BIM model; the viewport is not the source of truth.
 
 ## Known limitations

@@ -138,6 +138,50 @@ function render() {
   updateInspector(project);
 }
 
+function bindInspectorForm(type, id) {
+  const form = inspector.querySelector("#element-form");
+  if (!form) return;
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const value = (name) => Number(form.elements.namedItem(name).value);
+    try {
+      let invalidated = [];
+      if (type === "wall") {
+        const transaction = store.transact("Edit wall parameters", (draft) => {
+          const current = draft.walls[id];
+          draft.walls[id] = {
+            ...current,
+            thickness: value("thickness"),
+            height: value("height"),
+            baseElevation: value("baseElevation"),
+            referenceLine: form.elements.namedItem("referenceLine").value,
+            revision: current.revision + 1
+          };
+        });
+        invalidated = transaction.invalidatedElementIds;
+      } else {
+        const transaction = store.transact("Edit hosted opening", (draft) => {
+          const current = draft.openings[id];
+          draft.openings[id] = {
+            ...current,
+            positionAlongBaseline: value("positionAlongBaseline"),
+            width: value("width"),
+            height: value("height"),
+            sillElevation: value("sillElevation"),
+            anchor: form.elements.namedItem("anchor").value,
+            revision: current.revision + 1
+          };
+        });
+        invalidated = transaction.invalidatedElementIds;
+      }
+      setStatus(`Updated ${type} · ${Math.max(0, invalidated.length - 1)} dependent element(s) invalidated`);
+      render();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    }
+  });
+}
+
 function updateInspector(project) {
   if (!selected) {
     inspector.innerHTML = '<div class="inspector-empty"><div class="inspector-glyph">◇</div><strong>No selection</strong><p>Select a wall or opening to inspect its semantic properties.</p></div>';
@@ -147,11 +191,29 @@ function updateInspector(project) {
     const wall = project.walls[selected.id];
     if (!wall) { selected = null; return updateInspector(project); }
     const hosted = Object.values(project.openings).filter((o) => o.hostWallId === wall.id);
-    inspector.innerHTML = `<div class="property-group"><h3>WALL ELEMENT</h3><div class="property-row"><span>Element ID</span><span>${wall.id}</span></div><div class="property-row"><span>Reference line</span><span>${wall.referenceLine}</span></div><div class="property-row"><span>Thickness</span><span>${wall.thickness} mm</span></div><div class="property-row"><span>Height</span><span>${wall.height} mm</span></div><div class="property-row"><span>Base elevation</span><span>${wall.baseElevation} mm</span></div></div><div class="property-group"><h3>RELATIONSHIPS</h3><div class="property-row"><span>Hosted openings</span><span>${hosted.length}</span></div><div class="property-row"><span>Composite</span><span>${wall.compositeId ?? "Basic"}</span></div><div class="property-row"><span>Revision</span><span>${wall.revision}</span></div></div>`;
+    inspector.innerHTML = `<div class="property-group"><h3>WALL ELEMENT</h3><div class="property-row"><span>Element ID</span><span>${wall.id}</span></div><div class="property-row"><span>Revision</span><span>${wall.revision}</span></div></div>
+      <form id="element-form" class="property-form">
+        <label>Reference line<select name="referenceLine"><option value="center" ${wall.referenceLine === "center" ? "selected" : ""}>Center</option><option value="left" ${wall.referenceLine === "left" ? "selected" : ""}>Left</option><option value="right" ${wall.referenceLine === "right" ? "selected" : ""}>Right</option></select></label>
+        <label>Thickness (mm)<input name="thickness" type="number" min="1" step="1" required value="${wall.thickness}"></label>
+        <label>Height (mm)<input name="height" type="number" min="1" step="1" required value="${wall.height}"></label>
+        <label>Base elevation (mm)<input name="baseElevation" type="number" step="1" required value="${wall.baseElevation}"></label>
+        <button id="apply-element" class="save-button" type="submit">Apply wall changes</button>
+      </form>
+      <div class="property-group"><h3>RELATIONSHIPS</h3><div class="property-row"><span>Hosted openings</span><span>${hosted.length}</span></div><div class="property-row"><span>Composite</span><span>${wall.compositeId ?? "Basic"}</span></div></div>`;
+    bindInspectorForm("wall", wall.id);
   } else {
     const opening = project.openings[selected.id];
     if (!opening) { selected = null; return updateInspector(project); }
-    inspector.innerHTML = `<div class="property-group"><h3>${opening.type.toUpperCase()} OPENING</h3><div class="property-row"><span>Element ID</span><span>${opening.id}</span></div><div class="property-row"><span>Host wall</span><span>${opening.hostWallId}</span></div><div class="property-row"><span>Anchor</span><span>${opening.anchor}</span></div><div class="property-row"><span>Width</span><span>${opening.width} mm</span></div><div class="property-row"><span>Height</span><span>${opening.height} mm</span></div><div class="property-row"><span>Sill</span><span>${opening.sillElevation} mm</span></div></div>`;
+    inspector.innerHTML = `<div class="property-group"><h3>${opening.type.toUpperCase()} OPENING</h3><div class="property-row"><span>Element ID</span><span>${opening.id}</span></div><div class="property-row"><span>Host wall</span><span>${opening.hostWallId}</span></div><div class="property-row"><span>Revision</span><span>${opening.revision}</span></div></div>
+      <form id="element-form" class="property-form">
+        <label>Anchor<select name="anchor"><option value="center" ${opening.anchor === "center" ? "selected" : ""}>Center</option><option value="left" ${opening.anchor === "left" ? "selected" : ""}>Left</option><option value="right" ${opening.anchor === "right" ? "selected" : ""}>Right</option></select></label>
+        <label>Position along wall (mm)<input name="positionAlongBaseline" type="number" min="0" step="1" required value="${opening.positionAlongBaseline}"></label>
+        <label>Width (mm)<input name="width" type="number" min="1" step="1" required value="${opening.width}"></label>
+        <label>Height (mm)<input name="height" type="number" min="1" step="1" required value="${opening.height}"></label>
+        <label>Sill elevation (mm)<input name="sillElevation" type="number" min="0" step="1" required value="${opening.sillElevation}"></label>
+        <button id="apply-element" class="save-button" type="submit">Apply opening changes</button>
+      </form>`;
+    bindInspectorForm("opening", opening.id);
   }
 }
 
