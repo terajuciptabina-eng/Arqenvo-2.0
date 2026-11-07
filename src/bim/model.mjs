@@ -146,15 +146,29 @@ export function validateDimension(dimension, project = undefined) {
   assertFiniteNumber(dimension.offset, "dimension.offset");
   if (dimension.offset <= 0) throw new RangeError("Dimension offset must be positive");
   if (!Number.isInteger(dimension.revision) || dimension.revision < 1) throw new RangeError("Dimension revision must be a positive integer");
+  const resolved = [];
   for (const anchor of dimension.anchors) {
     if (anchor.type === "wall-endpoint") {
       if (!anchor.wallId || !["start", "end"].includes(anchor.endpoint)) throw new TypeError("Wall endpoint dimension anchor is invalid");
-      if (project && !project.walls?.[anchor.wallId]) throw new RangeError(`Dimension ${dimension.id} references missing wall ${anchor.wallId}`);
+      const wall = project?.walls?.[anchor.wallId];
+      if (project && !wall) throw new RangeError(`Dimension ${dimension.id} references missing wall ${anchor.wallId}`);
+      if (wall) resolved.push(wall.baseline[anchor.endpoint === "start" ? 0 : 1]);
     } else if (anchor.type === "point") {
       if (!Array.isArray(anchor.point) || anchor.point.length !== 2) throw new TypeError("Free dimension anchor must be a 2D point");
       anchor.point.forEach((value, index) => assertFiniteNumber(value, `dimension.anchor[${index}]`));
+      resolved.push(anchor.point);
     } else {
       throw new RangeError("Unsupported dimension anchor type");
+    }
+  }
+  if (project && resolved.length === dimension.anchors.length) {
+    const first = resolved[0], last = resolved[resolved.length - 1];
+    const dx = last[0] - first[0], dy = last[1] - first[1];
+    const axisLength = Math.hypot(dx, dy);
+    if (axisLength <= 1e-6) throw new RangeError(`Dimension ${dimension.id} has zero length`);
+    for (const point of resolved.slice(1, -1)) {
+      const perpendicularDistance = Math.abs((point[0] - first[0]) * dy - (point[1] - first[1]) * dx) / axisLength;
+      if (perpendicularDistance > 1) throw new RangeError(`Dimension ${dimension.id} witness points must be collinear within 1 mm`);
     }
   }
   return true;

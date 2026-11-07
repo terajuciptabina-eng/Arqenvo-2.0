@@ -39,3 +39,13 @@ test("chain dimensions derive segment values while total dimensions derive one o
   assert.equal(deriveDimensionPlan(project, total).segments.length, 1);
   assert.equal(deriveDimensionPlan(project, total).segments[0].value, 3000);
 });
+
+test("project rejects a non-collinear dimension chain", () => {
+  const project = createProject();
+  project.dimensions.diagonal = createDimension({ id: "diagonal", kind: "chain", anchors: [
+    { type: "point", point: [0, 0] },
+    { type: "point", point: [1000, 100] },
+    { type: "point", point: [2000, 0] }
+  ] });
+  assert.throws(() => validateProject(project), /collinear within 1 mm/);
+});
