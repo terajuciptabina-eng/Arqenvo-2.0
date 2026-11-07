@@ -16,8 +16,8 @@ concurrency:
 
 jobs:
   runner-smoke:
-    name: Bare Ubuntu hosted-runner smoke test
-    runs-on: ubuntu-latest
+    name: Ubuntu Slim hosted-runner smoke test
+    runs-on: ubuntu-slim
     timeout-minutes: 3
     steps:
       - name: Prove runner allocation and shell execution
