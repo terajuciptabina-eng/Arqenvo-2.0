@@ -234,7 +234,7 @@ jobs:
             directory: benchmarks/manifold-spike
           - candidate: opengeometry-2
             directory: benchmarks/opengeometry-2-spike
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     timeout-minutes: 20
     steps:
       - name: Checkout
