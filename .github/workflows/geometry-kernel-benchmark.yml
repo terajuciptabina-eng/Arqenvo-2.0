@@ -9,6 +9,7 @@ on:
       - "benchmarks/kernel-spike/**"
       - "benchmarks/manifold-spike/**"
       - "benchmarks/browser-spike/**"
+      - "benchmarks/opengeometry-2-spike/**"
       - "docs/GEOMETRY_BENCHMARKS/**"
       - ".github/workflows/geometry-kernel-benchmark.yml"
 
@@ -171,5 +172,44 @@ jobs:
           path: |
             benchmarks/browser-spike/benchmark-output/
             benchmarks/browser-spike/package-lock.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  opengeometry-2-browser-spike:
+    name: OpenGeometry 2.0.18 browser compatibility probe
+    runs-on: macos-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: benchmarks/opengeometry-2-spike
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: benchmarks/opengeometry-2-spike/package.json
+
+      - name: Install pinned OpenGeometry 2 dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Playwright WebKit
+        run: npx playwright install webkit
+
+      - name: Run desktop and iPad-like WebKit compatibility probe
+        run: npm run test:browser
+
+      - name: Upload OpenGeometry 2 benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opengeometry-2-webkit-probe
+          path: |
+            benchmarks/opengeometry-2-spike/benchmark-output/
+            benchmarks/opengeometry-2-spike/package-lock.json
           if-no-files-found: warn
           retention-days: 30
