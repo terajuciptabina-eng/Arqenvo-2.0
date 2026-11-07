@@ -13,3 +13,5 @@ The first executable domain/geometry vertical slice is now implemented.
 All dimensions use millimetres and Z-up project coordinates. BIM semantics remain authoritative. Derived geometry is disposable and reproducible.
 
 The current junction solver is an independent first-pass solver, not a claim of Archicad parity. Wall-priority rules, complex composites, curved junctions and library-part reveal profiles remain gated on further reference evidence.
+
+- `app/main.mjs` and `app/app.css`: first responsive 2D browser workspace with wall placement, hosted door/window placement, selection, zoom/pan and undo/redo. This is an early plan-editor slice, not full CAD/BIM parity.

@@ -1,0 +1,342 @@
+import { createOpening, createProject, createWall } from "../bim/model.mjs";
+import { deriveWallPlan } from "../geometry/wall-derivation.mjs";
+import { ProjectStore } from "../project/project-store.mjs";
+
+const canvas = document.querySelector("#plan-canvas");
+const context = canvas.getContext("2d");
+const statusText = document.querySelector("#status-text");
+const canvasStatus = document.querySelector("#canvas-status");
+const inspector = document.querySelector("#inspector-content");
+const emptyState = document.querySelector("#empty-state");
+const elementCount = document.querySelector("#element-count");
+const scaleReadout = document.querySelector("#scale-readout");
+const store = new ProjectStore(createProject({ id: "arqenvo-local-project" }));
+
+let activeTool = "select";
+let selected = null;
+let draftStart = null;
+let draftPoint = null;
+let isPanning = false;
+let lastPointer = null;
+let camera = { x: 0, y: 0, scale: 0.16 };
+let width = 0;
+let height = 0;
+let dpr = 1;
+let nextWallNumber = 1;
+let nextOpeningNumber = 1;
+
+const setStatus = (message) => {
+  statusText.textContent = message;
+  canvasStatus.textContent = message;
+};
+const snapshot = () => store.snapshot;
+const snap = (value, step = 50) => Math.round(value / step) * step;
+const toScreen = ([x, y]) => [width / 2 + (x - camera.x) * camera.scale, height / 2 - (y - camera.y) * camera.scale];
+const toWorld = (x, y) => [camera.x + (x - width / 2) / camera.scale, camera.y - (y - height / 2) / camera.scale];
+
+function pathPolygon(points) {
+  if (!points.length) return;
+  const first = toScreen(points[0]);
+  context.beginPath();
+  context.moveTo(first[0], first[1]);
+  for (const point of points.slice(1)) {
+    const screen = toScreen(point);
+    context.lineTo(screen[0], screen[1]);
+  }
+  context.closePath();
+}
+
+function drawGrid() {
+  const step = camera.scale > 0.55 ? 100 : camera.scale > 0.25 ? 200 : 500;
+  const left = camera.x - width / (2 * camera.scale);
+  const right = camera.x + width / (2 * camera.scale);
+  const bottom = camera.y - height / (2 * camera.scale);
+  const top = camera.y + height / (2 * camera.scale);
+  context.lineWidth = 1;
+  for (let x = Math.floor(left / step) * step; x <= right; x += step) {
+    const p1 = toScreen([x, bottom]);
+    const p2 = toScreen([x, top]);
+    context.strokeStyle = x === 0 ? "#c0cad5" : "#dce2e9";
+    context.beginPath(); context.moveTo(p1[0], p1[1]); context.lineTo(p2[0], p2[1]); context.stroke();
+  }
+  for (let y = Math.floor(bottom / step) * step; y <= top; y += step) {
+    const p1 = toScreen([left, y]);
+    const p2 = toScreen([right, y]);
+    context.strokeStyle = y === 0 ? "#c0cad5" : "#dce2e9";
+    context.beginPath(); context.moveTo(p1[0], p1[1]); context.lineTo(p2[0], p2[1]); context.stroke();
+  }
+}
+
+function drawWall(wall, project) {
+  const composite = wall.compositeId ? project.composites[wall.compositeId] : null;
+  const openings = Object.values(project.openings).filter((opening) => opening.hostWallId === wall.id);
+  const plan = deriveWallPlan(wall, composite, openings);
+  const outer = plan.skins[0].footprint;
+  const last = plan.skins[plan.skins.length - 1].footprint;
+  const outline = [outer[0], outer[1], last[2], last[3]];
+  pathPolygon(outline);
+  context.fillStyle = selected?.type === "wall" && selected.id === wall.id ? "#b7d9d3" : "#c9d1d9";
+  context.fill();
+  context.strokeStyle = selected?.type === "wall" && selected.id === wall.id ? "#168f82" : "#526174";
+  context.lineWidth = selected?.type === "wall" && selected.id === wall.id ? 2.5 : 1.5;
+  context.stroke();
+
+  for (const skin of plan.skins.slice(0, -1)) {
+    const edge = skin.footprint[2];
+    const start = toScreen(skin.footprint[3]);
+    const end = toScreen(edge);
+    context.strokeStyle = "#9aa8b7";
+    context.lineWidth = 1;
+    context.beginPath(); context.moveTo(start[0], start[1]); context.lineTo(end[0], end[1]); context.stroke();
+  }
+
+  for (const opening of plan.openings) {
+    pathPolygon(opening.cutPolygon);
+    context.fillStyle = "#edf1f5";
+    context.fill();
+    context.strokeStyle = selected?.type === "opening" && selected.id === opening.id ? "#168f82" : "#526174";
+    context.lineWidth = 1.5;
+    context.stroke();
+    const [a, b] = opening.cutPolygon;
+    const [c, d] = opening.cutPolygon.slice(2);
+    for (const [p, q] of [[a, d], [b, c]]) {
+      const sp = toScreen(p), sq = toScreen(q);
+      context.beginPath(); context.moveTo(sp[0], sp[1]); context.lineTo(sq[0], sq[1]); context.stroke();
+    }
+    if (opening.type === "window") {
+      const mid1 = [(a[0] + d[0]) / 2, (a[1] + d[1]) / 2];
+      const mid2 = [(b[0] + c[0]) / 2, (b[1] + c[1]) / 2];
+      const p = toScreen(mid1), q = toScreen(mid2);
+      context.strokeStyle = "#168f82";
+      context.beginPath(); context.moveTo(p[0], p[1]); context.lineTo(q[0], q[1]); context.stroke();
+    }
+  }
+}
+
+function drawPreview() {
+  if (!draftStart || !draftPoint) return;
+  const a = toScreen(draftStart), b = toScreen(draftPoint);
+  context.save();
+  context.setLineDash([6, 4]);
+  context.strokeStyle = "#168f82";
+  context.lineWidth = 2;
+  context.beginPath(); context.moveTo(a[0], a[1]); context.lineTo(b[0], b[1]); context.stroke();
+  context.restore();
+}
+
+function render() {
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = "#edf1f5";
+  context.fillRect(0, 0, width, height);
+  drawGrid();
+  const project = snapshot();
+  Object.values(project.walls).forEach((wall) => drawWall(wall, project));
+  drawPreview();
+  const walls = Object.keys(project.walls).length;
+  const openings = Object.keys(project.openings).length;
+  emptyState.classList.toggle("hidden", walls + openings > 0 || activeTool === "wall");
+  elementCount.textContent = `${walls} walls · ${openings} openings`;
+  scaleReadout.textContent = `Zoom ${Math.round(camera.scale * 1000) / 10}%`;
+  updateInspector(project);
+}
+
+function updateInspector(project) {
+  if (!selected) {
+    inspector.innerHTML = '<div class="inspector-empty"><div class="inspector-glyph">◇</div><strong>No selection</strong><p>Select a wall or opening to inspect its semantic properties.</p></div>';
+    return;
+  }
+  if (selected.type === "wall") {
+    const wall = project.walls[selected.id];
+    if (!wall) { selected = null; return updateInspector(project); }
+    const hosted = Object.values(project.openings).filter((o) => o.hostWallId === wall.id);
+    inspector.innerHTML = `<div class="property-group"><h3>WALL ELEMENT</h3><div class="property-row"><span>Element ID</span><span>${wall.id}</span></div><div class="property-row"><span>Reference line</span><span>${wall.referenceLine}</span></div><div class="property-row"><span>Thickness</span><span>${wall.thickness} mm</span></div><div class="property-row"><span>Height</span><span>${wall.height} mm</span></div><div class="property-row"><span>Base elevation</span><span>${wall.baseElevation} mm</span></div></div><div class="property-group"><h3>RELATIONSHIPS</h3><div class="property-row"><span>Hosted openings</span><span>${hosted.length}</span></div><div class="property-row"><span>Composite</span><span>${wall.compositeId ?? "Basic"}</span></div><div class="property-row"><span>Revision</span><span>${wall.revision}</span></div></div>`;
+  } else {
+    const opening = project.openings[selected.id];
+    if (!opening) { selected = null; return updateInspector(project); }
+    inspector.innerHTML = `<div class="property-group"><h3>${opening.type.toUpperCase()} OPENING</h3><div class="property-row"><span>Element ID</span><span>${opening.id}</span></div><div class="property-row"><span>Host wall</span><span>${opening.hostWallId}</span></div><div class="property-row"><span>Anchor</span><span>${opening.anchor}</span></div><div class="property-row"><span>Width</span><span>${opening.width} mm</span></div><div class="property-row"><span>Height</span><span>${opening.height} mm</span></div><div class="property-row"><span>Sill</span><span>${opening.sillElevation} mm</span></div></div>`;
+  }
+}
+
+function resize() {
+  const rect = canvas.getBoundingClientRect();
+  width = rect.width;
+  height = rect.height;
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.max(1, Math.round(width * dpr));
+  canvas.height = Math.max(1, Math.round(height * dpr));
+  context.setTransform(dpr, 0, 0, dpr, 0, 0);
+  render();
+}
+
+function setTool(tool) {
+  activeTool = tool;
+  draftStart = null;
+  draftPoint = null;
+  document.querySelectorAll("[data-tool]").forEach((button) => button.classList.toggle("active", button.dataset.tool === tool));
+  const descriptions = {
+    select: "Select · Tap an element to inspect it",
+    wall: "Wall · Drag to draw a straight wall",
+    door: "Door · Tap a wall to host a 900 × 2100 mm door",
+    window: "Window · Tap a wall to host an 800 × 1200 mm window"
+  };
+  setStatus(descriptions[tool]);
+  canvas.style.cursor = tool === "select" ? "default" : "crosshair";
+  render();
+}
+
+function projectToSegment(point, wall) {
+  const [a, b] = wall.baseline;
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const t = Math.max(0, Math.min(1, ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / (dx * dx + dy * dy)));
+  const nearest = [a[0] + t * dx, a[1] + t * dy];
+  return { nearest, distance: Math.hypot(point[0] - nearest[0], point[1] - nearest[1]), along: t * Math.hypot(dx, dy) };
+}
+
+function nearestWall(point, project, maxDistance = 180) {
+  let best = null;
+  for (const wall of Object.values(project.walls)) {
+    const hit = projectToSegment(point, wall);
+    if (hit.distance <= maxDistance && (!best || hit.distance < best.distance)) best = { wall, ...hit };
+  }
+  return best;
+}
+
+function createHostedOpening(type, point) {
+  const project = snapshot();
+  const hit = nearestWall(point, project);
+  if (!hit) return setStatus("No host wall nearby · Move closer to a wall");
+  const width = type === "door" ? 900 : 800;
+  const height = type === "door" ? 2100 : 1200;
+  const sillElevation = type === "door" ? 0 : 900;
+  const id = `${type}-${nextOpeningNumber++}`;
+  try {
+    const opening = createOpening({ id, type, hostWallId: hit.wall.id, positionAlongBaseline: snap(hit.along, 10), anchor: "center", width, height, sillElevation });
+    store.transact(`Add ${type}`, (draft) => { draft.openings[id] = opening; });
+    selected = { type: "opening", id };
+    setStatus(`${type === "door" ? "Door" : "Window"} hosted on ${hit.wall.id}`);
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : String(error));
+  }
+  render();
+}
+
+function selectAt(point) {
+  const project = snapshot();
+  let closestOpening = null;
+  for (const opening of Object.values(project.openings)) {
+    const wall = project.walls[opening.hostWallId];
+    if (!wall) continue;
+    const hit = projectToSegment(point, wall);
+    const center = opening.anchor === "center" ? opening.positionAlongBaseline : opening.anchor === "left" ? opening.positionAlongBaseline + opening.width / 2 : opening.positionAlongBaseline - opening.width / 2;
+    if (hit.distance < 110 && Math.abs(hit.along - center) <= opening.width / 2 + 30) closestOpening = opening;
+  }
+  if (closestOpening) selected = { type: "opening", id: closestOpening.id };
+  else {
+    const hit = nearestWall(point, project, 140);
+    selected = hit ? { type: "wall", id: hit.wall.id } : null;
+  }
+  setStatus(selected ? `Selected ${selected.type} · ${selected.id}` : "Selection cleared");
+  render();
+}
+
+function pointerDown(event) {
+  canvas.setPointerCapture(event.pointerId);
+  const rect = canvas.getBoundingClientRect();
+  const point = toWorld(event.clientX - rect.left, event.clientY - rect.top);
+  if (event.button === 1 || event.button === 2 || event.altKey) {
+    isPanning = true;
+    lastPointer = [event.clientX, event.clientY];
+    event.preventDefault();
+    return;
+  }
+  if (activeTool === "wall") {
+    draftStart = [snap(point[0]), snap(point[1])];
+    draftPoint = draftStart;
+    render();
+  } else if (activeTool === "door" || activeTool === "window") {
+    createHostedOpening(activeTool, point);
+  } else {
+    selectAt(point);
+  }
+}
+
+function pointerMove(event) {
+  if (isPanning && lastPointer) {
+    const dx = event.clientX - lastPointer[0], dy = event.clientY - lastPointer[1];
+    camera.x -= dx / camera.scale;
+    camera.y += dy / camera.scale;
+    lastPointer = [event.clientX, event.clientY];
+    render();
+    return;
+  }
+  if (draftStart) {
+    const rect = canvas.getBoundingClientRect();
+    const point = toWorld(event.clientX - rect.left, event.clientY - rect.top);
+    draftPoint = [snap(point[0]), snap(point[1])];
+    render();
+  }
+}
+
+function pointerUp() {
+  if (isPanning) {
+    isPanning = false;
+    lastPointer = null;
+    return;
+  }
+  if (!draftStart || !draftPoint) return;
+  const start = draftStart, end = draftPoint;
+  draftStart = null; draftPoint = null;
+  const length = Math.hypot(end[0] - start[0], end[1] - start[1]);
+  if (length < 100) {
+    setStatus("Wall not created · Minimum length is 100 mm");
+    render();
+    return;
+  }
+  const id = `wall-${nextWallNumber++}`;
+  try {
+    const wall = createWall({ id, baseline: [start, end], referenceLine: "center", thickness: 200, baseElevation: 0, height: 3000 });
+    store.transact("Add wall", (draft) => { draft.walls[id] = wall; });
+    selected = { type: "wall", id };
+    setStatus(`Created ${id} · ${Math.round(length)} mm`);
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : String(error));
+  }
+  render();
+}
+
+function zoomAt(event) {
+  event.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const px = event.clientX - rect.left, py = event.clientY - rect.top;
+  const before = toWorld(px, py);
+  camera.scale = Math.max(0.035, Math.min(1.2, camera.scale * (event.deltaY < 0 ? 1.12 : 0.89)));
+  const after = toWorld(px, py);
+  camera.x += before[0] - after[0];
+  camera.y += before[1] - after[1];
+  render();
+}
+
+document.querySelectorAll("[data-tool]").forEach((button) => button.addEventListener("click", () => setTool(button.dataset.tool)));
+document.querySelector("#start-wall").addEventListener("click", () => setTool("wall"));
+document.querySelector("#undo").addEventListener("click", () => { if (store.undo()) { selected = null; setStatus("Undo completed"); render(); } });
+document.querySelector("#redo").addEventListener("click", () => { if (store.redo()) { selected = null; setStatus("Redo completed"); render(); } });
+document.querySelector("#reset-view").addEventListener("click", () => { camera = { x: 0, y: 0, scale: 0.16 }; render(); setStatus("View reset"); });
+canvas.addEventListener("pointerdown", pointerDown);
+canvas.addEventListener("pointermove", pointerMove);
+canvas.addEventListener("pointerup", pointerUp);
+canvas.addEventListener("pointercancel", pointerUp);
+canvas.addEventListener("wheel", zoomAt, { passive: false });
+canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+window.addEventListener("keydown", (event) => {
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") { event.preventDefault(); if (store.undo()) { selected = null; render(); setStatus("Undo completed"); } }
+  else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "y") { event.preventDefault(); if (store.redo()) { selected = null; render(); setStatus("Redo completed"); } }
+  else if (event.key === "Escape") { draftStart = null; draftPoint = null; setTool("select"); }
+  else if (event.key === "1") setTool("select");
+  else if (event.key === "2") setTool("wall");
+  else if (event.key === "3") setTool("door");
+  else if (event.key === "4") setTool("window");
+});
+new ResizeObserver(resize).observe(canvas);
+resize();
+setTool("select");

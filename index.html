@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#111827" />
+    <title>ARQENVO 2.0 — BIM Workspace</title>
+    <link rel="stylesheet" href="./src/app/app.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="ARQENVO home">
+          <span class="brand-mark">A</span>
+          <span><strong>ARQENVO</strong><small>2.0 · DESIGN WORKSPACE</small></span>
+        </a>
+        <div class="project-name"><span class="live-dot"></span> Untitled Project <small>· Local session</small></div>
+        <div class="top-actions">
+          <button id="undo" class="icon-button" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button>
+          <button id="redo" class="icon-button" title="Redo (Ctrl+Y)" aria-label="Redo">↷</button>
+          <span class="unit-chip">MM</span>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <aside class="tool-rail" aria-label="Tools">
+          <div class="rail-label">DESIGN</div>
+          <button class="tool active" data-tool="select" title="Select (1)"><span>↖</span><small>Select</small></button>
+          <button class="tool" data-tool="wall" title="Wall (2)"><span>▱</span><small>Wall</small></button>
+          <button class="tool" data-tool="door" title="Door (3)"><span>▯</span><small>Door</small></button>
+          <button class="tool" data-tool="window" title="Window (4)"><span>▤</span><small>Window</small></button>
+          <div class="rail-divider"></div>
+          <button class="tool" id="reset-view" title="Reset view"><span>⌖</span><small>View</small></button>
+        </aside>
+
+        <main class="drawing-area">
+          <div class="view-toolbar">
+            <div class="view-title"><span class="view-icon">▦</span><strong>Floor Plan</strong><span class="view-tag">2D</span></div>
+            <div class="view-tools"><span class="hint">Scroll to zoom · Middle-drag to pan</span><span class="scale-readout" id="scale-readout">1 : 100</span></div>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="plan-canvas" aria-label="2D floor plan editor"></canvas>
+            <div class="canvas-empty" id="empty-state">
+              <div class="empty-symbol">⌗</div>
+              <strong>Start your building model</strong>
+              <span>Select Wall, then drag on the plan to create your first wall.</span>
+              <button class="primary-button" id="start-wall">Create first wall</button>
+            </div>
+            <div class="canvas-status" id="canvas-status">Ready · Select a tool to begin</div>
+          </div>
+          <footer class="statusbar">
+            <span><i class="status-dot"></i><span id="status-text">Ready</span></span>
+            <span>Project units: millimetres</span>
+            <span id="element-count">0 elements</span>
+          </footer>
+        </main>
+
+        <aside class="inspector">
+          <div class="inspector-head"><span>ELEMENT INFO</span><span class="inspector-menu">•••</span></div>
+          <div id="inspector-content" class="inspector-content">
+            <div class="inspector-empty"><div class="inspector-glyph">◇</div><strong>No selection</strong><p>Select a wall or opening to inspect its semantic properties.</p></div>
+          </div>
+          <div class="inspector-foot">
+            <span class="foot-key">M2</span>
+            <span>Core modelling preview</span>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <script type="module" src="./src/app/main.mjs"></script>
+  </body>
+</html>
