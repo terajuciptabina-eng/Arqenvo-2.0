@@ -2,6 +2,10 @@
 
 **Decision status: OPEN — no production kernel selected.**
 
+## Shared fixtures
+
+- `fixtures/wall-core-fixtures.json` — canonical, kernel-neutral analytic inputs for K01, K03, K06 and K07. All candidate spikes must consume these same fixtures and record the configured tolerance; do not modify fixtures per candidate.
+
 ## Current candidate review
 
 See [Candidate Desk Review — 2026-11-07](./CANDIDATE_DESK_REVIEW_2026-11-07.md) for the source-backed preliminary comparison of OpenGeometry 3.x, brepjs + occt-wasm, Manifold 3.x and direct opencascade.js.
