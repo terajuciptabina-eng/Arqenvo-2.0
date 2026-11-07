@@ -15,3 +15,5 @@ All dimensions use millimetres and Z-up project coordinates. BIM semantics remai
 The current junction solver is an independent first-pass solver, not a claim of Archicad parity. Wall-priority rules, complex composites, curved junctions and library-part reveal profiles remain gated on further reference evidence.
 
 - `app/main.mjs` and `app/app.css`: first responsive 2D browser workspace with basic and three-skin composite wall placement, draggable wall baseline endpoints, live L-junction-derived wall caps, hosted door/window placement, selection, wall/opening parameter editing, zoom/pan and undo/redo. This is an early plan-editor slice, not full CAD/BIM parity.
+
+- `geometry/dimension-derivation.mjs`: chain/total dimension witness lines, offset geometry and millimetre labels.

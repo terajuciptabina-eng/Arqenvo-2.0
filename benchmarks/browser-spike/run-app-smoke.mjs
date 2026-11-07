@@ -136,10 +136,23 @@ async function exerciseProfile(profile) {
     await page.locator('[data-view="plan"]').click();
     if (await page.locator("#view-mode").textContent() !== "2D") throw new Error("Plan view did not restore after 3D preview");
 
+    await page.locator('[data-tool="dimension-chain"]').click();
+    const tap = async (x, yPoint) => {
+      if (profile.name === "webkit-ipad-like") await page.touchscreen.tap(x, yPoint);
+      else await page.mouse.click(x, yPoint);
+    };
+    await tap(bounds.x + bounds.width * 0.2, y);
+    await tap(bounds.x + bounds.width * 0.8, y);
+    await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("1 dimensions"));
+    await page.locator('[data-tool="dimension-total"]').click();
+    await tap(bounds.x + bounds.width * 0.15, y + bounds.height * 0.3);
+    await tap(bounds.x + bounds.width * 0.45, y + bounds.height * 0.3);
+    await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("2 dimensions"));
+
     await page.locator("#save-project").click();
     await page.waitForFunction(() => document.querySelector("#canvas-status")?.textContent?.startsWith("Saved locally"));
     await page.reload();
-    await page.waitForFunction(() => window.__arqenvoReady === true && document.querySelector("#element-count")?.textContent?.includes("3 walls") && document.querySelector("#element-count")?.textContent?.includes("2 openings"), undefined, { timeout: 15000 });
+    await page.waitForFunction(() => window.__arqenvoReady === true && document.querySelector("#element-count")?.textContent?.includes("3 walls") && document.querySelector("#element-count")?.textContent?.includes("2 openings") && document.querySelector("#element-count")?.textContent?.includes("2 dimensions"), undefined, { timeout: 15000 });
 
     if (profile.name === "webkit-ipad-like") {
       const inspectorDisplay = await page.locator(".inspector").evaluate((node) => getComputedStyle(node).display);

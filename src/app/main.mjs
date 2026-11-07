@@ -1,5 +1,6 @@
-import { createComposite, createOpening, createProject, createWall } from "../bim/model.mjs";
+import { createComposite, createDimension, createOpening, createProject, createWall } from "../bim/model.mjs";
 import { deriveProjectPlan } from "../geometry/wall-derivation.mjs";
+import { deriveProjectDimensions } from "../geometry/dimension-derivation.mjs";
 import { ProjectStore } from "../project/project-store.mjs";
 import { createIndexedDbProjectRepository, createMemoryProjectRepository } from "../storage/project-repository.mjs";
 
@@ -34,6 +35,7 @@ let selected = null;
 let draftStart = null;
 let draftPoint = null;
 let wallHandleDrag = null;
+let dimensionDraftStart = null;
 let isPanning = false;
 let lastPointer = null;
 let camera = { x: 0, y: 0, scale: 0.16 };
@@ -44,10 +46,12 @@ const restoredSnapshot = store.snapshot;
 let nextWallNumber = Math.max(0, ...Object.keys(restoredSnapshot.walls).map((id) => Number(id.match(/^wall-(\d+)$/)?.[1] ?? 0))) + 1;
 let nextOpeningNumber = Math.max(0, ...Object.keys(restoredSnapshot.openings).map((id) => Number(id.match(/^(?:door|window)-(\d+)$/)?.[1] ?? 0))) + 1;
 let nextCompositeNumber = Math.max(0, ...Object.keys(restoredSnapshot.composites).map((id) => Number(id.match(/^composite-(\d+)$/)?.[1] ?? 0))) + 1;
+let nextDimensionNumber = Math.max(0, ...Object.keys(restoredSnapshot.dimensions ?? {}).map((id) => Number(id.match(/^dimension-(\d+)$/)?.[1] ?? 0))) + 1;
 function refreshElementCounters(project) {
   nextWallNumber = Math.max(0, ...Object.keys(project.walls).map((id) => Number(id.match(/^wall-(\d+)$/)?.[1] ?? 0))) + 1;
   nextOpeningNumber = Math.max(0, ...Object.keys(project.openings).map((id) => Number(id.match(/^(?:door|window)-(\d+)$/)?.[1] ?? 0))) + 1;
   nextCompositeNumber = Math.max(0, ...Object.keys(project.composites).map((id) => Number(id.match(/^composite-(\d+)$/)?.[1] ?? 0))) + 1;
+  nextDimensionNumber = Math.max(0, ...Object.keys(project.dimensions ?? {}).map((id) => Number(id.match(/^dimension-(\d+)$/)?.[1] ?? 0))) + 1;
 }
 
 const setStatus = (message) => {
@@ -246,6 +250,45 @@ function draw3DOpenings(project, derived) {
   }
 }
 
+
+function drawDimensionPlans(plans) {
+  for (const plan of plans) {
+    for (const segment of plan.segments) {
+      const start = toScreen(segment.start), end = toScreen(segment.end);
+      const witnessStart = toScreen(segment.witnessStart), witnessEnd = toScreen(segment.witnessEnd);
+      context.strokeStyle = "#287f9c";
+      context.fillStyle = "#246b87";
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(witnessStart[0], witnessStart[1]);
+      context.lineTo(start[0], start[1]);
+      context.moveTo(witnessEnd[0], witnessEnd[1]);
+      context.lineTo(end[0], end[1]);
+      context.moveTo(start[0], start[1]);
+      context.lineTo(end[0], end[1]);
+      context.stroke();
+      const tick = 5;
+      const angle = Math.atan2(end[1] - start[1], end[0] - start[0]) + Math.PI / 4;
+      for (const point of [start, end]) {
+        context.beginPath();
+        context.moveTo(point[0] - Math.cos(angle) * tick, point[1] - Math.sin(angle) * tick);
+        context.lineTo(point[0] + Math.cos(angle) * tick, point[1] + Math.sin(angle) * tick);
+        context.stroke();
+      }
+      const midpoint = [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2];
+      const label = plan.kind === "total" ? `TOTAL ${segment.label}` : segment.label;
+      context.font = "10px Inter, sans-serif";
+      const textWidth = context.measureText(label).width;
+      context.fillStyle = "rgba(237,241,245,.94)";
+      context.fillRect(midpoint[0] - textWidth / 2 - 4, midpoint[1] - 15, textWidth + 8, 14);
+      context.fillStyle = "#246b87";
+      context.textAlign = "center";
+      context.fillText(label, midpoint[0], midpoint[1] - 5);
+    }
+  }
+  context.textAlign = "start";
+}
+
 function draw3DPreview(project, derived) {
   draw3DGrid();
   const walls = Object.values(project.walls).sort((a, b) => {
@@ -261,6 +304,16 @@ function draw3DPreview(project, derived) {
 }
 
 function drawPreview() {
+  if (dimensionDraftStart && draftPoint) {
+    const a = toScreen(dimensionDraftStart), b = toScreen(draftPoint);
+    context.save();
+    context.setLineDash([5, 4]);
+    context.strokeStyle = "#287f9c";
+    context.lineWidth = 1.5;
+    context.beginPath(); context.moveTo(a[0], a[1]); context.lineTo(b[0], b[1]); context.stroke();
+    context.restore();
+    return;
+  }
   if (wallHandleDrag && draftPoint) {
     const wall = snapshot().walls[wallHandleDrag.wallId];
     if (wall) {
@@ -295,14 +348,16 @@ function render() {
   if (activeView === "plan") {
     drawGrid();
     Object.values(project.walls).forEach((wall) => drawWall(wall, project, derived.walls[wall.id]));
+    drawDimensionPlans(deriveProjectDimensions(project));
     drawPreview();
   } else {
     draw3DPreview(project, derived);
   }
   const walls = Object.keys(project.walls).length;
   const openings = Object.keys(project.openings).length;
+  const dimensions = Object.keys(project.dimensions ?? {}).length;
   emptyState.classList.toggle("hidden", walls + openings > 0 || activeTool === "wall" || activeTool === "composite");
-  elementCount.textContent = `${walls} walls · ${openings} openings`;
+  elementCount.textContent = `${walls} walls · ${openings} openings · ${dimensions} dimensions`;
   scaleReadout.textContent = `Zoom ${Math.round(camera.scale * 1000) / 10}%`;
   updateInspector(project);
 }
@@ -433,10 +488,13 @@ function setTool(tool) {
   draftPoint = null;
   document.querySelectorAll("[data-tool]").forEach((button) => button.classList.toggle("active", button.dataset.tool === tool));
   wallHandleDrag = null;
+  dimensionDraftStart = null;
   const descriptions = {
     select: "Select · Tap an element to inspect it",
     wall: "Wall · Drag to draw a straight wall",
     composite: "Composite wall · Drag to draw a three-skin wall",
+    "dimension-chain": "Chain dimension · Tap two points to place a 1000 mm offset dimension",
+    "dimension-total": "Total dimension · Tap two points to place a 1400 mm offset dimension",
     door: "Door · Tap a wall to host a 900 × 2100 mm door",
     window: "Window · Tap a wall to host an 800 × 1200 mm window"
   };
@@ -476,6 +534,21 @@ function nearestWall(point, project, maxDistance = 180) {
     if (hit.distance <= maxDistance && (!best || hit.distance < best.distance)) best = { wall, ...hit };
   }
   return best;
+}
+
+
+function resolveDimensionAnchor(point, project) {
+  let best = null;
+  for (const wall of Object.values(project.walls)) {
+    for (const endpoint of ["start", "end"]) {
+      const position = wall.baseline[endpoint === "start" ? 0 : 1];
+      const distance = Math.hypot(point[0] - position[0], point[1] - position[1]);
+      if (distance <= 180 && (!best || distance < best.distance)) {
+        best = { distance, anchor: { type: "wall-endpoint", wallId: wall.id, endpoint } };
+      }
+    }
+  }
+  return best?.anchor ?? { type: "point", point };
 }
 
 function createHostedOpening(type, point) {
@@ -535,6 +608,37 @@ function pointerDown(event) {
     draftStart = [snap(point[0]), snap(point[1])];
     draftPoint = draftStart;
     render();
+  } else if (activeTool === "dimension-chain" || activeTool === "dimension-total") {
+    const snappedPoint = [snap(point[0]), snap(point[1])];
+    if (!dimensionDraftStart) {
+      dimensionDraftStart = snappedPoint;
+      draftPoint = snappedPoint;
+      setStatus("Dimension start set · tap the second witness point");
+    } else {
+      const distance = Math.hypot(snappedPoint[0] - dimensionDraftStart[0], snappedPoint[1] - dimensionDraftStart[1]);
+      if (distance < 10) {
+        setStatus("Dimension not created · witness points are too close");
+      } else {
+        const kind = activeTool === "dimension-total" ? "total" : "chain";
+        const id = `dimension-${nextDimensionNumber++}`;
+        const project = snapshot();
+        const dimension = createDimension({
+          id,
+          kind,
+          anchors: [resolveDimensionAnchor(dimensionDraftStart, project), resolveDimensionAnchor(snappedPoint, project)]
+        });
+        try {
+          store.transact(`Add ${kind} dimension`, (draft) => { draft.dimensions[id] = dimension; });
+          void persistProject();
+          setStatus(`Created ${kind} dimension · ${Math.round(distance)} mm`);
+        } catch (error) {
+          setStatus(error instanceof Error ? error.message : String(error));
+        }
+      }
+      dimensionDraftStart = null;
+      draftPoint = null;
+    }
+    render();
   } else if (activeTool === "select" && selected?.type === "wall") {
     const wall = snapshot().walls[selected.id];
     const startDistance = Math.hypot(point[0] - wall.baseline[0][0], point[1] - wall.baseline[0][1]);
@@ -562,7 +666,7 @@ function pointerMove(event) {
     render();
     return;
   }
-  if (wallHandleDrag || draftStart) {
+  if (dimensionDraftStart || wallHandleDrag || draftStart) {
     const rect = canvas.getBoundingClientRect();
     const point = toWorld(event.clientX - rect.left, event.clientY - rect.top);
     draftPoint = [snap(point[0]), snap(point[1])];
@@ -572,6 +676,7 @@ function pointerMove(event) {
 
 function pointerCancel() {
   wallHandleDrag = null;
+  dimensionDraftStart = null;
   draftStart = null;
   draftPoint = null;
   isPanning = false;
@@ -684,6 +789,8 @@ window.addEventListener("keydown", (event) => {
   else if (event.key === "2") setTool("wall");
   else if (event.key === "3") setTool("door");
   else if (event.key === "4") setTool("window");
+  else if (event.key === "5") setTool("dimension-chain");
+  else if (event.key === "6") setTool("dimension-total");
 });
 new ResizeObserver(resize).observe(canvas);
 resize();

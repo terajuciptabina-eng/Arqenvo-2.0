@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createProject, createWall } from "../../src/bim/model.mjs";
+import { createDimension, createProject, createWall } from "../../src/bim/model.mjs";
 import { ProjectStore } from "../../src/project/project-store.mjs";
 
 test("project transactions are atomic and undo/redo restore snapshots", () => {
@@ -70,4 +70,18 @@ test("replacing a project validates before atomically committing and supports un
   assert.equal(store.snapshot.walls.w, undefined);
   assert.throws(() => store.replaceProject({ schemaVersion: 99, id: "invalid" }), /Unsupported project schema/);
   assert.equal(store.snapshot.id, "before");
+});
+
+test("moving a wall invalidates associative dimensions anchored to its endpoints", () => {
+  const project = createProject();
+  project.walls.w = createWall({ id: "w", baseline: [[0, 0], [2000, 0]], thickness: 200, height: 3000 });
+  project.dimensions.d = createDimension({ id: "d", kind: "chain", anchors: [
+    { type: "wall-endpoint", wallId: "w", endpoint: "start" },
+    { type: "wall-endpoint", wallId: "w", endpoint: "end" }
+  ] });
+  const store = new ProjectStore(project);
+  const result = store.transact("extend dimensioned wall", (draft) => {
+    draft.walls.w = { ...draft.walls.w, baseline: [[0, 0], [2500, 0]], revision: 2 };
+  });
+  assert.ok(result.invalidatedElementIds.includes("dimension:d"));
 });

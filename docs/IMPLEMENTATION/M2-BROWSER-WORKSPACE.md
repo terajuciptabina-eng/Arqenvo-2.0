@@ -12,7 +12,8 @@
 - Display wall outlines, composite skin boundaries and opening symbols in a 2D floor-plan canvas.
 - Zoom with the wheel/trackpad; pan with middle mouse, right mouse or Alt-drag.
 - IndexedDB project save/restore, manual Save, and validated JSON project import/export.
-- Undo/redo and keyboard shortcuts 1–4, Escape, Ctrl/Cmd+Z and Ctrl/Cmd+Y.
+- Chain and total dimension tools with wall-endpoint associative anchors, free-point fallback, millimetre labels and default offsets of 1000 mm (chain) and 1400 mm (total).
+- Undo/redo and keyboard shortcuts 1–6, Escape, Ctrl/Cmd+Z and Ctrl/Cmd+Y.
 - Element inspector edits wall thickness, height, base elevation and reference line; opening anchor, position, width, height and sill elevation. Changes commit as validated semantic transactions and invalidate dependent geometry.
 - All geometry is derived from the semantic BIM model; the viewport is not the source of truth.
 

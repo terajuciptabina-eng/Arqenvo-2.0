@@ -11,8 +11,10 @@ export class ProjectStore {
   #redo = [];
 
   constructor(project = createProject()) {
-    validateProject(project);
-    this.#state = clone(project);
+    const initial = clone(project);
+    initial.dimensions ??= {};
+    validateProject(initial);
+    this.#state = initial;
   }
 
   get snapshot() {
@@ -39,6 +41,7 @@ export class ProjectStore {
   replaceProject(project, label = "Replace project") {
     validateProject(project);
     const next = clone(project);
+    next.dimensions ??= {};
     const changedEntities = changedProjectEntities(this.#state, next);
     const previousGraph = buildProjectDependencyGraph(this.#state);
     const nextGraph = buildProjectDependencyGraph(next);

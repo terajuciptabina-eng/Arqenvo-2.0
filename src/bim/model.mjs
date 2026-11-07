@@ -124,6 +124,42 @@ export function validateOpening(opening, hostWall = undefined) {
   return true;
 }
 
+export function createDimension(input) {
+  const dimension = {
+    id: input.id,
+    type: "dimension",
+    kind: input.kind ?? "chain",
+    anchors: input.anchors.map((anchor) => anchor.type === "wall-endpoint"
+      ? { type: "wall-endpoint", wallId: anchor.wallId, endpoint: anchor.endpoint }
+      : { type: "point", point: [...anchor.point] }),
+    offset: input.offset ?? ((input.kind ?? "chain") === "total" ? 1400 : 1000),
+    revision: input.revision ?? 1
+  };
+  validateDimension(dimension);
+  return dimension;
+}
+
+export function validateDimension(dimension, project = undefined) {
+  if (!dimension || typeof dimension.id !== "string" || !dimension.id.trim()) throw new TypeError("Dimension id is required");
+  if (!["chain", "total"].includes(dimension.kind)) throw new RangeError("Dimension kind must be chain or total");
+  if (!Array.isArray(dimension.anchors) || dimension.anchors.length < 2) throw new RangeError("Dimension requires at least two anchors");
+  assertFiniteNumber(dimension.offset, "dimension.offset");
+  if (dimension.offset <= 0) throw new RangeError("Dimension offset must be positive");
+  if (!Number.isInteger(dimension.revision) || dimension.revision < 1) throw new RangeError("Dimension revision must be a positive integer");
+  for (const anchor of dimension.anchors) {
+    if (anchor.type === "wall-endpoint") {
+      if (!anchor.wallId || !["start", "end"].includes(anchor.endpoint)) throw new TypeError("Wall endpoint dimension anchor is invalid");
+      if (project && !project.walls?.[anchor.wallId]) throw new RangeError(`Dimension ${dimension.id} references missing wall ${anchor.wallId}`);
+    } else if (anchor.type === "point") {
+      if (!Array.isArray(anchor.point) || anchor.point.length !== 2) throw new TypeError("Free dimension anchor must be a 2D point");
+      anchor.point.forEach((value, index) => assertFiniteNumber(value, `dimension.anchor[${index}]`));
+    } else {
+      throw new RangeError("Unsupported dimension anchor type");
+    }
+  }
+  return true;
+}
+
 export function createProject(input = {}) {
   return {
     schemaVersion: 1,
@@ -133,6 +169,7 @@ export function createProject(input = {}) {
     composites: {},
     openings: {},
     junctions: {},
+    dimensions: {},
     metadata: { units: "mm", coordinateSystem: "right-handed", upAxis: "Z" }
   };
 }
@@ -176,6 +213,7 @@ export function validateProject(project) {
       }
     }
   }
+  for (const dimension of Object.values(project.dimensions ?? {})) validateDimension(dimension, project);
   for (const wall of Object.values(project.walls)) {
     if (wall.compositeId) {
       const composite = project.composites[wall.compositeId];

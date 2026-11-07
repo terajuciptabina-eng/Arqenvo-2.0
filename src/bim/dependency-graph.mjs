@@ -47,6 +47,11 @@ export function buildProjectDependencyGraph(project) {
     graph.addDependency(`wall:${opening.hostWallId}`, `opening:${opening.id}`);
     graph.addDependency(`opening:${opening.id}`, `geometry:wall:${opening.hostWallId}`);
   }
+  for (const dimension of Object.values(project.dimensions ?? {})) {
+    for (const anchor of dimension.anchors ?? []) {
+      if (anchor.type === "wall-endpoint") graph.addDependency(`wall:${anchor.wallId}`, `dimension:${dimension.id}`);
+    }
+  }
   for (const junction of Object.values(project.junctions ?? {})) {
     const junctionKey = `junction:${junction.id}`;
     for (const wallId of junction.wallIds ?? []) {
@@ -59,12 +64,12 @@ export function buildProjectDependencyGraph(project) {
 
 export function changedProjectEntities(before, after) {
   const changed = [];
-  for (const type of ["walls", "composites", "openings", "junctions"]) {
+  for (const type of ["walls", "composites", "openings", "junctions", "dimensions"]) {
     const oldItems = before[type] ?? {};
     const newItems = after[type] ?? {};
     for (const id of new Set([...Object.keys(oldItems), ...Object.keys(newItems)])) {
       if (JSON.stringify(oldItems[id]) !== JSON.stringify(newItems[id])) {
-        const prefix = type === "walls" ? "wall" : type === "composites" ? "composite" : type === "openings" ? "opening" : "junction";
+        const prefix = type === "walls" ? "wall" : type === "composites" ? "composite" : type === "openings" ? "opening" : type === "junctions" ? "junction" : "dimension";
         changed.push(`${prefix}:${id}`);
       }
     }
