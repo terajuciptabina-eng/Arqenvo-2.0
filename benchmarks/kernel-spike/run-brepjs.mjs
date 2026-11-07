@@ -169,6 +169,46 @@ await runCase("K07", async () => {
   };
 });
 
+
+function buildAnalyticVolumeChecks(caseResults) {
+  const byId = new Map(caseResults.map((item) => [item.id, item]));
+  const checks = [];
+  const add = (caseId, measurement, expected, measured) => {
+    checks.push({
+      caseId,
+      measurement,
+      expected,
+      measured,
+      delta: measured - expected,
+      exactMatch: measured === expected
+    });
+  };
+  const k01 = byId.get("K01");
+  if (k01) add("K01", "volumeMm3", k01.expectedVolumeMm3, k01.measuredVolumeMm3);
+  const k03 = byId.get("K03");
+  if (k03) add("K03", "volumeMm3", k03.expectedVolumeMm3, k03.measuredVolumeMm3);
+  const k06 = byId.get("K06");
+  if (k06) {
+    k06.expectedSkinVolumesMm3.forEach((value, index) =>
+      add("K06", `skin[${index}].volumeMm3`, value, k06.measuredSkinVolumesMm3[index])
+    );
+  }
+  const k07 = byId.get("K07");
+  if (k07) {
+    k07.expectedRemainingSkinVolumesMm3.forEach((value, index) =>
+      add("K07", `remainingSkin[${index}].volumeMm3`, value, k07.measuredRemainingSkinVolumesMm3[index])
+    );
+    add("K07", "remainingTotalVolumeMm3", k07.expectedRemainingTotalVolumeMm3, k07.measuredRemainingTotalVolumeMm3);
+  }
+  return {
+    status: checks.length > 0 && checks.every((check) => check.exactMatch) ? "exact-match" : "mismatch",
+    method: "strict equality against analytic axis-aligned box fixture volumes; not an approved general geometry tolerance",
+    checks
+  };
+}
+
+const validation = buildAnalyticVolumeChecks(results);
+
 const report = {
   generatedAt: new Date().toISOString(),
   candidate: "brepjs + occt-wasm",
@@ -182,6 +222,7 @@ const report = {
   configuredTolerance: "candidate default; exact value not yet instrumented",
   peakRssBytesAfterRun: process.memoryUsage().rss,
   cases: results,
+  validation,
   failures,
   limitations: [
     "Node-side geometry smoke/benchmark only; not a browser or iPad Safari performance result.",
@@ -195,6 +236,6 @@ const report = {
 writeFileSync(resolve(outputDir, "benchmark-results-brepjs.json"), JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));
 
-if (failures.length > 0) {
+if (failures.length > 0 || validation.status !== "exact-match") {
   process.exitCode = 1;
 }
