@@ -8,6 +8,7 @@ on:
     paths:
       - "benchmarks/kernel-spike/**"
       - "benchmarks/manifold-spike/**"
+      - "benchmarks/browser-spike/**"
       - "docs/GEOMETRY_BENCHMARKS/**"
       - ".github/workflows/geometry-kernel-benchmark.yml"
 
@@ -131,5 +132,44 @@ jobs:
           path: |
             benchmarks/manifold-spike/benchmark-output/
             benchmarks/manifold-spike/package-lock.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  browser-webkit-spike:
+    name: BRepJS browser WebKit smoke
+    runs-on: macos-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: benchmarks/browser-spike
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: benchmarks/browser-spike/package.json
+
+      - name: Install pinned browser-spike dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Playwright WebKit
+        run: npx playwright install webkit
+
+      - name: Run desktop and iPad-like WebKit smoke tests
+        run: npm run test:browser
+
+      - name: Upload browser benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brepjs-webkit-smoke
+          path: |
+            benchmarks/browser-spike/benchmark-output/
+            benchmarks/browser-spike/package-lock.json
           if-no-files-found: warn
           retention-days: 30
