@@ -8,8 +8,8 @@
 
 Prioritise a controlled prototype comparison of:
 
-1. **OpenGeometry 3.x** — browser-native B-Rep CAD kernel with Rust/WASM and Three.js SDK.
-2. **brepjs v20 + occt-wasm** — typed TypeScript API over an Open CASCADE WebAssembly kernel.
+1. **brepjs 20.x + occt-wasm 5.x** — currently published TypeScript API over an Open CASCADE WebAssembly kernel.
+2. **OpenGeometry** — browser-native B-Rep CAD kernel with Rust/WASM and Three.js SDK; resolve the repository/npm release mismatch before implementation.
 3. **Manifold 3.x** — robust manifold triangle-mesh Boolean library as a mesh-kernel control/possible secondary representation.
 
 Keep direct **opencascade.js** as a fallback investigation if the wrappers fail to expose a required OCCT capability. Do not select based on documentation claims alone.
@@ -18,39 +18,49 @@ Keep direct **opencascade.js** as a fallback investigation if the wrappers fail 
 
 | Candidate | Geometry model | Browser/WASM evidence | Initial fit | Main risk |
 |---|---|---|---|---|
-| OpenGeometry 3.x | B-Rep solids and wires | Rust/WASM; Three.js SDK; tessellation worker | Strong browser-native candidate for extrude, sweep and Booleans | Project states API/package is evolving; published feature list omits some curves/features available in earlier 2.0 line |
-| brepjs v20 + occt-wasm | Exact B-Rep | WASM; worker-ready; Three.js mesh adapter | Strong B-Rep candidate with typed API and STEP workflow | OCCT kernel LGPL obligations; kernel abstraction and version policy need review |
+| brepjs + occt-wasm | Exact B-Rep | WASM; worker-ready; Three.js mesh adapter | Strong B-Rep candidate with typed API and STEP workflow | OCCT kernel LGPL obligations; WASM SIMD/tail-call browser baseline; API/version policy |
+| OpenGeometry | B-Rep solids and wires | Rust/WASM; Three.js SDK; tessellation worker | Strong browser-native candidate for extrude, sweep and Booleans | GitHub README describes 3.0.0 while npm search results surfaced 2.0.x packages; API/package mismatch must be resolved |
 | Manifold 3.x | Manifold triangle meshes | JS/TS npm binding and browser WASM | Strong Boolean/topology robustness candidate for derived mesh operations | Not a B-Rep kernel; input must already be manifold |
-| direct opencascade.js | OCCT B-Rep | Emscripten/WASM port | Broad OCCT capability and direct access if wrappers are insufficient | Low-level integration, bundler/build complexity, large distribution and LGPL obligations |
+| direct opencascade.js | OCCT B-Rep | Emscripten/WASM port | Broad OCCT capability and direct access if wrappers are insufficient | Low-level integration, bundler/build complexity, larger distribution and LGPL obligations |
 
 ## 3. Candidate findings from official project material
 
-### OpenGeometry
-
-The current repository README describes version 3.0.0. It documents B-Rep solids, Boolean union/subtract/intersect, extrusion, sweep and revolve, STEP export, body validity queries, transaction marks/rollback and tessellation in a worker or inline. It integrates directly with Three.js and is distributed under MPL-2.0.
-
-The same README says the API and package structure are evolving. Its 3.0 feature list excludes curves other than lines, circles and arcs, and lists some capabilities that existed in 2.0 as absent in 3.0. The project must therefore pin an exact version and validate every required profile/curve workflow.
-
-Potential fit: browser-first, relatively direct WASM setup and worker-backed tessellation.  
-Prototype questions: custom profile boundaries, exact arc handling, B-Rep access, Boolean reliability for multiple wall skins/openings, iPad Safari memory, rollback semantics, and whether worker execution covers geometry computation or only tessellation.
-
-Official sources:
-- https://github.com/OpenGeometry-io/OpenGeometry
-- https://opengeometry.io/
-
 ### brepjs + occt-wasm
 
-The brepjs website describes version 20, an exact B-Rep API, a TypeScript type system for topology invariants, an OCCT WASM kernel as the current default, worker-ready operation, a Three.js adapter and STEP/IGES/DXF/GLB-related exchange workflows. The website reports approximately 4.7 MB brotli for occt-wasm.
+The brepjs v20 documentation describes an exact B-Rep API, a TypeScript type system for topology invariants, an OCCT WASM kernel as the current default, Web Worker support, a Three.js mesh adapter and STEP/IGES/DXF/GLB-related exchange workflows. The official installation guide supports browser WASM and documents Vite bundling. Its first-solid and Boolean guides provide explicit primitive, Boolean, measurement and export calls.
 
-The brepjs wrapper is Apache-2.0, but the default occt-wasm kernel is identified by the brepjs project as LGPL-2.1-only. The optional brepkit kernel is described as AGPL-3.0-only or commercial in the current 3.x documentation; do not adopt that optional kernel for a proprietary hosted product without a separate legal and commercial decision. brepjs's own license does not override the selected kernel's license.
+The npm results retrieved on 2026-11-07 surfaced brepjs 20.18.0 and occt-wasm 5.15.0. Treat these as candidate versions observed during this review, not as an instruction to install unpinned latest versions later.
+
+The brepjs wrapper is Apache-2.0, but the default occt-wasm kernel's compiled WASM output is LGPL-2.1-only. The optional brepkit kernel is described as AGPL-3.0-only or commercial in current 3.x documentation; do not adopt that optional kernel for a proprietary hosted product without a separate legal and commercial decision. brepjs's own license does not override the selected kernel's license.
+
+The occt-wasm package states that its WASM build requires SIMD, tail calls and WASM exception support, and lists Safari 17.2+ as the earliest verified Safari version. This is a published compatibility floor, not proof of performance or stability on iPad Safari.
 
 Potential fit: strong B-Rep abstraction and exact CAD workflow.  
-Prototype questions: API maturity, memory lifetime/disposal, custom wall profile operations, browser worker integration, WASM payload and Safari performance, LGPL distribution obligations, and whether the wrapper exposes all needed topology operations.
+Prototype questions: API maturity, memory lifetime/disposal, custom wall profile operations, browser worker integration, WASM payload and iPad Safari performance, LGPL distribution obligations, and whether the wrapper exposes all needed topology operations.
 
 Official sources:
 - https://brepjs.dev/
 - https://brepjs.dev/getting-started/install
-- https://github.com/andymai/brepjs
+- https://brepjs.dev/getting-started/first-solid
+- https://brepjs.dev/tasks/booleans
+- https://www.npmjs.com/package/brepjs
+- https://www.npmjs.com/package/occt-wasm
+
+### OpenGeometry
+
+The current OpenGeometry GitHub repository README describes version 3.0.0. It documents B-Rep solids, Boolean union/subtract/intersect, extrusion, sweep and revolve, STEP export, body validity queries, transaction marks/rollback and tessellation in a worker or inline. It integrates directly with Three.js and is distributed under MPL-2.0.
+
+**Release mismatch discovered:** npm search results retrieved on 2026-11-07 surfaced OpenGeometry 2.0.x package versions, while the repository's current README describes 3.0.0. The exact 3.0.0 installable npm artifact was not established by this review. Do not write a production integration against the 3.0 README until the published package/version and its matching source/API are confirmed.
+
+The project states that its API and package structure are evolving. Its 3.0 feature list excludes curves other than lines, circles and arcs, and lists some capabilities that existed in 2.0 as absent in 3.0. The prototype must therefore pin an exact published version and validate every required profile/curve workflow.
+
+Potential fit: browser-first, Rust/WASM and Three.js integration.  
+Prototype questions: published version/API alignment, custom profile boundaries, exact arc handling, B-Rep access, Boolean reliability for multiple wall skins/openings, iPad Safari memory, rollback semantics, and whether worker execution covers geometry computation or only tessellation.
+
+Official sources:
+- https://github.com/OpenGeometry-io/OpenGeometry
+- https://www.npmjs.com/package/opengeometry
+- https://opengeometry.io/
 
 ### Manifold
 
@@ -82,9 +92,9 @@ Official sources:
 
 | Priority | Candidate | Reason to test |
 |---:|---|---|
-| 1 | OpenGeometry 3.x | Directly browser-native, B-Rep, Three.js and worker support; test evolving API against wall-profile requirements |
-| 2 | brepjs v20 + occt-wasm | Strong exact B-Rep abstraction and typed API; test legal obligations and wrapper capability |
-| 3 | Manifold 3.x | Establish robust mesh Boolean baseline and evaluate as a possible secondary mesh engine |
+| 1 | brepjs + occt-wasm | Current published v20/v5 package line, exact B-Rep API, explicit WASM/worker integration and browser guidance |
+| 2 | OpenGeometry | Strong browser-native direction, but confirm published package/API alignment before coding |
+| 3 | Manifold | Establish robust mesh Boolean baseline and evaluate as a possible secondary mesh engine |
 | 4 | direct opencascade.js | Retain as fallback if higher-level wrappers block required OCCT operations |
 
 This ranking only orders the prototype work. It is not a performance, quality or legal-compliance verdict.
@@ -131,4 +141,4 @@ Do not approve a production kernel until all of the following are complete:
 
 ## 7. Immediate next engineering action
 
-Create an isolated kernel spike only after the benchmark fixture schema is agreed. It must not become application source code and must not decide the final architecture by accident. First prove K01, K03, K06 and K07 for the two leading B-Rep candidates, then expand to the full matrix. If one candidate cannot preserve skin identity or reliably cut a hosted opening, record the failure rather than adding a one-off workaround.
+Create an isolated kernel spike only after the benchmark fixture schema is agreed. It must not become application source code and must not decide the final architecture by accident. First prove K01, K03, K06 and K07 for brepjs/occt-wasm and the exact published OpenGeometry package line, then expand to the full matrix. If one candidate cannot preserve skin identity or reliably cut a hosted opening, record the failure rather than adding a one-off workaround.
