@@ -2,6 +2,10 @@
 
 **Decision status: OPEN — no production kernel selected.**
 
+## Isolated prototype
+
+- `../../benchmarks/kernel-spike/` — first Node-side brepjs + occt-wasm spike. Run instructions and limitations are documented in its README. It does not select a production kernel and does not replace iPad Safari testing.
+
 ## Shared fixtures
 
 - `fixtures/wall-core-fixtures.json` — canonical, kernel-neutral analytic inputs for K01, K03, K06 and K07. All candidate spikes must consume these same fixtures and record the configured tolerance; do not modify fixtures per candidate.
