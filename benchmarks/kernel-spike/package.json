@@ -1,0 +1,16 @@
+{
+  "name": "arqenvo2-kernel-spike",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "bench": "node run-brepjs.mjs"
+  },
+  "dependencies": {
+    "brepjs": "20.18.0",
+    "occt-wasm": "5.15.0"
+  }
+}
