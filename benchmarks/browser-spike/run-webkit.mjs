@@ -43,7 +43,7 @@ try {
     }));
     const started = performance.now();
     try {
-      await page.goto("http://127.0.0.1:4173/", { waitUntil: "load", timeout: 30000 });
+      await page.goto("http://127.0.0.1:4173/", { waitUntil: "domcontentloaded", timeout: 30000 });
       await page.waitForFunction(() => window.__geometryBenchmark?.status, undefined, { timeout: 15000 });
       const result = await page.evaluate(() => window.__geometryBenchmark);
       const elapsedMilliseconds = performance.now() - started;
