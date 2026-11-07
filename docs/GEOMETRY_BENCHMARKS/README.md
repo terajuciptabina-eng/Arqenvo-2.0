@@ -1,6 +1,12 @@
 # Geometry Kernel Evaluation
 
-**Decision status: OPEN — no kernel selected.**
+**Decision status: OPEN — no production kernel selected.**
+
+## Current candidate review
+
+See [Candidate Desk Review — 2026-11-07](./CANDIDATE_DESK_REVIEW_2026-11-07.md) for the source-backed preliminary comparison of OpenGeometry 3.x, brepjs + occt-wasm, Manifold 3.x and direct opencascade.js.
+
+The review is desk research only. No runtime benchmark, iPad Safari test or final license approval has been completed. Do not treat the preliminary prototype order as a kernel selection.
 
 ## Candidates
 
