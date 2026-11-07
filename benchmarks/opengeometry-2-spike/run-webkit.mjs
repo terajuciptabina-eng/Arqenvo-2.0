@@ -27,13 +27,13 @@ const declarationPatterns = [
 ];
 const declarationEvidence = [];
 for (const path of declarationFiles) {
-  const lines = readFileSync(path, "utf8").split("\\n");
+  const lines = readFileSync(path, "utf8").split("\n");
   for (let index = 0; index < lines.length; index++) {
     if (declarationPatterns.some((pattern) => lines[index].includes(pattern))) {
       declarationEvidence.push({
         file: path.slice(resolve(here, "node_modules/opengeometry").length + 1),
         line: index + 1,
-        excerpt: lines.slice(Math.max(0, index - 2), Math.min(lines.length, index + 5)).join("\\n")
+        excerpt: lines.slice(Math.max(0, index - 2), Math.min(lines.length, index + 5)).join("\n")
       });
     }
   }
@@ -103,8 +103,8 @@ const report = {
   failures,
   limitations: [
     "This spike intentionally pins npm opengeometry 2.0.18 because the current upstream GitHub README describes a different 3.0 API.",
-    "The initial test only verifies WASM initialization and 2.0 Cuboid construction plus runtime API discovery.",
-    "No wall Boolean, composite-skin, STEP or curved-wall parity is claimed until method signatures are confirmed and those cases are implemented.",
+    "Boolean coverage is one analytic cuboid subtraction on a single straight host; it does not establish multi-skin, curved-wall, junction or STEP parity.",
+    "Cut volume is computed from tessellated BufferGeometry; serialized B-Rep validation is reported separately and is not a native exact-volume measurement.",
     "iPad-like WebKit is emulation, not a physical iPad Safari validation."
   ]
 };
