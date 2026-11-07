@@ -33,6 +33,7 @@ let activeView = "plan";
 let selected = null;
 let draftStart = null;
 let draftPoint = null;
+let wallHandleDrag = null;
 let isPanning = false;
 let lastPointer = null;
 let camera = { x: 0, y: 0, scale: 0.16 };
@@ -142,8 +143,19 @@ function drawWall(wall, project, plan) {
       context.beginPath(); context.moveTo(p[0], p[1]); context.lineTo(q[0], q[1]); context.stroke();
     }
   }
+  if (selected?.type === "wall" && selected.id === wall.id) {
+    for (const endpoint of wall.baseline) {
+      const point = toScreen(endpoint);
+      context.beginPath();
+      context.arc(point[0], point[1], 5, 0, Math.PI * 2);
+      context.fillStyle = "#ffffff";
+      context.fill();
+      context.strokeStyle = "#168f82";
+      context.lineWidth = 2;
+      context.stroke();
+    }
+  }
 }
-
 
 function toIso(point, z = 0) {
   const x = point[0] - camera.x;
@@ -249,6 +261,21 @@ function draw3DPreview(project, derived) {
 }
 
 function drawPreview() {
+  if (wallHandleDrag && draftPoint) {
+    const wall = snapshot().walls[wallHandleDrag.wallId];
+    if (wall) {
+      const baseline = wall.baseline.map((point) => [...point]);
+      baseline[wallHandleDrag.endpoint === "start" ? 0 : 1] = draftPoint;
+      const a = toScreen(baseline[0]), b = toScreen(baseline[1]);
+      context.save();
+      context.setLineDash([6, 4]);
+      context.strokeStyle = "#168f82";
+      context.lineWidth = 2.5;
+      context.beginPath(); context.moveTo(a[0], a[1]); context.lineTo(b[0], b[1]); context.stroke();
+      context.restore();
+    }
+    return;
+  }
   if (!draftStart || !draftPoint) return;
   const a = toScreen(draftStart), b = toScreen(draftPoint);
   context.save();
@@ -336,7 +363,7 @@ function updateInspector(project) {
     const hosted = Object.values(project.openings).filter((o) => o.hostWallId === wall.id);
     const composite = wall.compositeId ? project.composites[wall.compositeId] : null;
     const compositeInfo = composite ? `<div class="property-group"><h3>COMPOSITE SKINS</h3>${composite.skins.map((skin) => `<div class="property-row"><span>${skin.id}</span><span>${skin.thickness} mm</span></div><div class="property-row"><span>Material</span><span>${skin.materialId}</span></div>`).join("")}</div>` : "";
-    inspector.innerHTML = `<div class="property-group"><h3>WALL ELEMENT</h3><div class="property-row"><span>Element ID</span><span>${wall.id}</span></div><div class="property-row"><span>Revision</span><span>${wall.revision}</span></div></div>
+    inspector.innerHTML = `<div class="property-group"><h3>WALL ELEMENT</h3><div class="property-row"><span>Element ID</span><span>${wall.id}</span></div><div class="property-row"><span>Revision</span><span>${wall.revision}</span></div><div class="property-row"><span>Baseline length</span><span>${Math.round(Math.hypot(wall.baseline[1][0] - wall.baseline[0][0], wall.baseline[1][1] - wall.baseline[0][1]))} mm</span></div></div>
       <form id="element-form" class="property-form">
         <label>Reference line<select name="referenceLine"><option value="center" ${wall.referenceLine === "center" ? "selected" : ""}>Center</option><option value="left" ${wall.referenceLine === "left" ? "selected" : ""}>Left</option><option value="right" ${wall.referenceLine === "right" ? "selected" : ""}>Right</option></select></label>
         <label>Thickness (mm)<input name="thickness" type="number" min="1" step="1" required value="${wall.thickness}"></label>
@@ -405,6 +432,7 @@ function setTool(tool) {
   draftStart = null;
   draftPoint = null;
   document.querySelectorAll("[data-tool]").forEach((button) => button.classList.toggle("active", button.dataset.tool === tool));
+  wallHandleDrag = null;
   const descriptions = {
     select: "Select · Tap an element to inspect it",
     wall: "Wall · Drag to draw a straight wall",
@@ -507,6 +535,17 @@ function pointerDown(event) {
     draftStart = [snap(point[0]), snap(point[1])];
     draftPoint = draftStart;
     render();
+  } else if (activeTool === "select" && selected?.type === "wall") {
+    const wall = snapshot().walls[selected.id];
+    const startDistance = Math.hypot(point[0] - wall.baseline[0][0], point[1] - wall.baseline[0][1]);
+    const endDistance = Math.hypot(point[0] - wall.baseline[1][0], point[1] - wall.baseline[1][1]);
+    if (Math.min(startDistance, endDistance) <= 180) {
+      wallHandleDrag = { wallId: wall.id, endpoint: startDistance <= endDistance ? "start" : "end" };
+      draftPoint = [snap(point[0]), snap(point[1])];
+      render();
+    } else {
+      selectAt(point);
+    }
   } else if (activeTool === "door" || activeTool === "window") {
     createHostedOpening(activeTool, point);
   } else {
@@ -523,7 +562,7 @@ function pointerMove(event) {
     render();
     return;
   }
-  if (draftStart) {
+  if (wallHandleDrag || draftStart) {
     const rect = canvas.getBoundingClientRect();
     const point = toWorld(event.clientX - rect.left, event.clientY - rect.top);
     draftPoint = [snap(point[0]), snap(point[1])];
@@ -531,10 +570,40 @@ function pointerMove(event) {
   }
 }
 
+function pointerCancel() {
+  wallHandleDrag = null;
+  draftStart = null;
+  draftPoint = null;
+  isPanning = false;
+  lastPointer = null;
+  render();
+}
+
 function pointerUp() {
   if (isPanning) {
     isPanning = false;
     lastPointer = null;
+    return;
+  }
+  if (wallHandleDrag && draftPoint) {
+    const drag = wallHandleDrag;
+    const wall = snapshot().walls[drag.wallId];
+    const baseline = wall.baseline.map((point) => [...point]);
+    baseline[drag.endpoint === "start" ? 0 : 1] = draftPoint;
+    wallHandleDrag = null;
+    draftPoint = null;
+    try {
+      const transaction = store.transact("Move wall endpoint", (draft) => {
+        const current = draft.walls[drag.wallId];
+        draft.walls[drag.wallId] = { ...current, baseline, revision: current.revision + 1 };
+      });
+      void persistProject();
+      selected = { type: "wall", id: drag.wallId };
+      setStatus(`Moved wall endpoint · ${Math.max(0, transaction.invalidatedElementIds.length - 1)} dependent element(s) invalidated`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    }
+    render();
     return;
   }
   if (!draftStart || !draftPoint) return;
@@ -599,7 +668,7 @@ document.querySelector("#reset-view").addEventListener("click", () => { camera =
 canvas.addEventListener("pointerdown", pointerDown);
 canvas.addEventListener("pointermove", pointerMove);
 canvas.addEventListener("pointerup", pointerUp);
-canvas.addEventListener("pointercancel", pointerUp);
+canvas.addEventListener("pointercancel", pointerCancel);
 canvas.addEventListener("wheel", zoomAt, { passive: false });
 canvas.addEventListener("contextmenu", (event) => event.preventDefault());
 document.querySelector("#save-project").addEventListener("click", () => { void persistProject(); });

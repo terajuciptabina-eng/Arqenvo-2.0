@@ -46,6 +46,23 @@ async function exerciseProfile(profile) {
     await page.mouse.up();
     await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("2 walls"));
 
+    // Select the branch and drag its free endpoint to validate direct wall-handle editing.
+    await page.locator('[data-tool="select"]').click();
+    const branchX = bounds.x + bounds.width * 0.8;
+    const branchStartY = y + bounds.height * 0.11;
+    await page.mouse.click(branchX, branchStartY);
+    const baselineBefore = await page.locator("#inspector-content").innerText();
+    const beforeLength = Number(baselineBefore.match(/Baseline length\s+(\d+) mm/)?.[1]);
+    await page.mouse.move(branchX, y + bounds.height * 0.22);
+    await page.mouse.down();
+    await page.mouse.move(branchX, y + bounds.height * 0.26, { steps: 6 });
+    await page.mouse.up();
+    const baselineAfter = await page.locator("#inspector-content").innerText();
+    const afterLength = Number(baselineAfter.match(/Baseline length\s+(\d+) mm/)?.[1]);
+    if (!Number.isFinite(beforeLength) || !Number.isFinite(afterLength) || afterLength <= beforeLength) {
+      throw new Error("Wall endpoint drag did not extend the selected wall");
+    }
+
     await page.locator('[data-tool="door"]').click();
     await page.mouse.click(bounds.x + bounds.width * 0.34, y);
     await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("1 openings"));
