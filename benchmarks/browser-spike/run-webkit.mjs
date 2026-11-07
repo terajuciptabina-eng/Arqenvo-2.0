@@ -34,7 +34,7 @@ try {
     page.on("pageerror", (error) => browserErrors.push(error.message));
     const started = performance.now();
     await page.goto("http://127.0.0.1:4173/", { waitUntil: "networkidle", timeout: 60000 });
-    await page.waitForFunction(() => window.__geometryBenchmark?.status, { timeout: 60000 });
+    await page.waitForFunction(() => window.__geometryBenchmark?.status, undefined, { timeout: 60000 });
     const result = await page.evaluate(() => window.__geometryBenchmark);
     const elapsedMilliseconds = performance.now() - started;
     const record = {
