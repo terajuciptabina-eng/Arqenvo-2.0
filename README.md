@@ -17,9 +17,10 @@ ARQENVO 2.0 is a greenfield development. Its initial product objective is to rep
 
 ## Current status
 
-**Stage:** M0 — foundation and technical investigation planning  
+**Stage:** M1 — targeted Archicad 29 wall evidence review and geometry-kernel desk evaluation  
+**Implementation:** Not started; no executable application or geometry engine exists yet  
 **Platform:** Browser  
-**Geometry strategy:** Evaluate candidate kernels before selection  
+**Geometry strategy:** Candidate review completed; runtime benchmarks and kernel selection remain open  
 **Reference:** Graphisoft Archicad 29 on macOS  
 **Deployment:** GitHub Pages is the preferred initial hosting target; deployment configuration is not yet enabled.
 
@@ -29,7 +30,9 @@ ARQENVO 2.0 is a greenfield development. Its initial product objective is to rep
 - `docs/ARCHITECTURE.md` — proposed system boundaries and data flow.
 - `docs/DEVELOPMENT_RULES.md` — mandatory engineering rules.
 - `docs/ARCHICAD_REFERENCE/INVESTIGATION_PROTOCOL.md` — REA and reference-observation workflow.
+- `docs/ARCHICAD_REFERENCE/WALL_GEOMETRY_REVERSE_ENGINEERING.md` — dossier-based wall, junction, composite-skin and opening findings.
 - `docs/GEOMETRY_BENCHMARKS/README.md` — kernel evaluation plan and acceptance tests.
+- `docs/GEOMETRY_BENCHMARKS/CANDIDATE_DESK_REVIEW_2026-11-07.md` — current candidate comparison; desk research only, not runtime results.
 - `docs/ARCHITECTURE_DECISIONS/` — decisions and deferred choices.
 
 ## Current non-goals
