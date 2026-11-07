@@ -66,7 +66,7 @@ const k01 = fixtures.cases.find((item) => item.id === "K01");
 await runCase("K01", async () => {
   const [length, thickness, height] = k01.expected.boundingDimensions;
   const wall = box(length, thickness, height, {
-    at: [0, -thickness / 2, k01.wall.baseElevation]
+    at: [length / 2, 0, k01.wall.baseElevation + height / 2]
   });
   const volumeMm3 = volumeOf(wall);
   const stepBytes = await saveStep(wall, "K01-straight-wall.step");
@@ -84,7 +84,7 @@ await runCase("K03", async () => {
   const solids = k03.solidConstruction.map(({ boxMin, boxMax }) => {
     const [x0, y0, z0] = boxMin;
     const [x1, y1, z1] = boxMax;
-    return box(x1 - x0, y1 - y0, z1 - z0, { at: [x0, y0, z0] });
+    return box(x1 - x0, y1 - y0, z1 - z0, { at: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2] });
   });
   const joined = unwrap(fuse(solids[0], solids[1]));
   const volumeMm3 = volumeOf(joined);
@@ -108,7 +108,7 @@ await runCase("K06", async () => {
 
   for (const skin of k06.skins) {
     const solid = box(length, skin.thickness, k06.wall.height, {
-      at: [0, y, k06.wall.baseElevation]
+      at: [length / 2, y + skin.thickness / 2, k06.wall.baseElevation + k06.wall.height / 2]
     });
     measuredSkinVolumesMm3.push(volumeOf(solid));
     stepBytesBySkin.push(await saveStep(solid, `K06-${skin.id}.step`));
@@ -138,9 +138,9 @@ await runCase("K07", async () => {
     opening.height + 2 * overrun,
     {
       at: [
-        (length - opening.width) / 2,
-        -wall.thickness / 2 - overrun,
-        wall.baseElevation - overrun
+        opening.hostPositionAlongBaseline,
+        0,
+        wall.baseElevation + opening.sillElevation + opening.height / 2
       ]
     }
   );
@@ -151,7 +151,7 @@ await runCase("K07", async () => {
 
   for (const skin of k07.skins) {
     const skinSolid = box(length, skin.thickness, wall.height, {
-      at: [0, y, wall.baseElevation]
+      at: [length / 2, y + skin.thickness / 2, wall.baseElevation + wall.height / 2]
     });
     const cutSkin = unwrap(cut(skinSolid, cutTool));
     measuredSkinVolumesMm3.push(volumeOf(cutSkin));
