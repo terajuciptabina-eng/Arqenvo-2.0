@@ -142,7 +142,9 @@ async function exerciseProfile(profile) {
       else await page.mouse.click(x, yPoint);
     };
     await tap(bounds.x + bounds.width * 0.2, y);
+    await tap(bounds.x + bounds.width * 0.5, y);
     await tap(bounds.x + bounds.width * 0.8, y);
+    await page.keyboard.press("Enter");
     await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("1 dimensions"));
     await page.locator('[data-tool="dimension-total"]').click();
     await tap(bounds.x + bounds.width * 0.15, y + bounds.height * 0.3);

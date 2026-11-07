@@ -24,3 +24,18 @@ test("dimensions reject references to missing walls and invalid offsets", () => 
   assert.throws(() => validateProject(project), /missing wall/);
   assert.throws(() => createDimension({ id: "bad-offset", offset: -100, anchors: [{ type: "point", point: [0, 0] }, { type: "point", point: [100, 0] }] }), /positive/);
 });
+
+test("chain dimensions derive segment values while total dimensions derive one overall value", () => {
+  const project = createProject();
+  project.walls.w = createWall({ id: "w", baseline: [[0, 0], [3000, 0]], thickness: 200, height: 3000 });
+  const anchors = [
+    { type: "point", point: [0, 0] },
+    { type: "point", point: [1500, 0] },
+    { type: "point", point: [3000, 0] }
+  ];
+  const chain = createDimension({ id: "chain-3", kind: "chain", anchors });
+  const total = createDimension({ id: "total-3", kind: "total", anchors });
+  assert.equal(deriveDimensionPlan(project, chain).segments.length, 2);
+  assert.equal(deriveDimensionPlan(project, total).segments.length, 1);
+  assert.equal(deriveDimensionPlan(project, total).segments[0].value, 3000);
+});

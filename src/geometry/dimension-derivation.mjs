@@ -12,15 +12,19 @@ export function deriveDimensionPlan(project, dimension) {
   const normal = leftNormal(direction);
   const dimensionPoints = points.map((point) => add(point, scale(normal, dimension.offset)));
   const segments = [];
-  for (let index = 0; index < points.length - 1; index += 1) {
+  const pairs = dimension.kind === "total"
+    ? [[0, points.length - 1]]
+    : points.slice(0, -1).map((_, index) => [index, index + 1]);
+  for (const [startIndex, endIndex] of pairs) {
+    const value = distance(points[startIndex], points[endIndex]);
     segments.push({
-      index,
-      start: dimensionPoints[index],
-      end: dimensionPoints[index + 1],
-      witnessStart: points[index],
-      witnessEnd: points[index + 1],
-      value: distance(points[index], points[index + 1]),
-      label: `${Math.round(distance(points[index], points[index + 1]))} mm`
+      index: startIndex,
+      start: dimensionPoints[startIndex],
+      end: dimensionPoints[endIndex],
+      witnessStart: points[startIndex],
+      witnessEnd: points[endIndex],
+      value,
+      label: `${Math.round(value)} mm`
     });
   }
   return {

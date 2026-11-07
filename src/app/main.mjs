@@ -36,6 +36,8 @@ let draftStart = null;
 let draftPoint = null;
 let wallHandleDrag = null;
 let dimensionDraftStart = null;
+let dimensionDraftAnchors = [];
+let dimensionDraftPoints = [];
 let isPanning = false;
 let lastPointer = null;
 let camera = { x: 0, y: 0, scale: 0.16 };
@@ -305,12 +307,18 @@ function draw3DPreview(project, derived) {
 
 function drawPreview() {
   if (dimensionDraftStart && draftPoint) {
-    const a = toScreen(dimensionDraftStart), b = toScreen(draftPoint);
+    const previewPoints = [...dimensionDraftPoints];
+    const last = previewPoints[previewPoints.length - 1];
+    if (!last || last[0] !== draftPoint[0] || last[1] !== draftPoint[1]) previewPoints.push(draftPoint);
+    const preview = previewPoints.map((point) => toScreen(point));
     context.save();
     context.setLineDash([5, 4]);
     context.strokeStyle = "#287f9c";
     context.lineWidth = 1.5;
-    context.beginPath(); context.moveTo(a[0], a[1]); context.lineTo(b[0], b[1]); context.stroke();
+    context.beginPath();
+    context.moveTo(preview[0][0], preview[0][1]);
+    for (const point of preview.slice(1)) context.lineTo(point[0], point[1]);
+    context.stroke();
     context.restore();
     return;
   }
@@ -489,6 +497,8 @@ function setTool(tool) {
   document.querySelectorAll("[data-tool]").forEach((button) => button.classList.toggle("active", button.dataset.tool === tool));
   wallHandleDrag = null;
   dimensionDraftStart = null;
+  dimensionDraftAnchors = [];
+  dimensionDraftPoints = [];
   const descriptions = {
     select: "Select · Tap an element to inspect it",
     wall: "Wall · Drag to draw a straight wall",
@@ -549,6 +559,27 @@ function resolveDimensionAnchor(point, project) {
     }
   }
   return best?.anchor ?? { type: "point", point };
+}
+
+function finalizeDimensionDraft(kind = "chain") {
+  if (!dimensionDraftStart || dimensionDraftAnchors.length < 2) {
+    setStatus("Dimension needs at least two witness points");
+    return;
+  }
+  const id = `dimension-${nextDimensionNumber++}`;
+  try {
+    const dimension = createDimension({ id, kind, anchors: dimensionDraftAnchors });
+    store.transact(`Add ${kind} dimension`, (draft) => { draft.dimensions[id] = dimension; });
+    void persistProject();
+    setStatus(`Created ${kind} dimension · ${dimensionDraftAnchors.length} witness points`);
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : String(error));
+  }
+  dimensionDraftStart = null;
+  dimensionDraftAnchors = [];
+  dimensionDraftPoints = [];
+  draftPoint = null;
+  render();
 }
 
 function createHostedOpening(type, point) {
@@ -612,31 +643,22 @@ function pointerDown(event) {
     const snappedPoint = [snap(point[0]), snap(point[1])];
     if (!dimensionDraftStart) {
       dimensionDraftStart = snappedPoint;
+      dimensionDraftAnchors = [resolveDimensionAnchor(snappedPoint, snapshot())];
+      dimensionDraftPoints = [snappedPoint];
       draftPoint = snappedPoint;
-      setStatus("Dimension start set · tap the second witness point");
+      setStatus("Dimension start set · add witness points; press Enter to finish chain");
     } else {
-      const distance = Math.hypot(snappedPoint[0] - dimensionDraftStart[0], snappedPoint[1] - dimensionDraftStart[1]);
-      if (distance < 10) {
-        setStatus("Dimension not created · witness points are too close");
+      const previous = dimensionDraftPoints[dimensionDraftPoints.length - 1];
+      const segmentLength = Math.hypot(snappedPoint[0] - previous[0], snappedPoint[1] - previous[1]);
+      if (segmentLength < 10) {
+        setStatus("Dimension point not added · points are too close");
       } else {
-        const kind = activeTool === "dimension-total" ? "total" : "chain";
-        const id = `dimension-${nextDimensionNumber++}`;
-        const project = snapshot();
-        const dimension = createDimension({
-          id,
-          kind,
-          anchors: [resolveDimensionAnchor(dimensionDraftStart, project), resolveDimensionAnchor(snappedPoint, project)]
-        });
-        try {
-          store.transact(`Add ${kind} dimension`, (draft) => { draft.dimensions[id] = dimension; });
-          void persistProject();
-          setStatus(`Created ${kind} dimension · ${Math.round(distance)} mm`);
-        } catch (error) {
-          setStatus(error instanceof Error ? error.message : String(error));
-        }
+        dimensionDraftPoints.push(snappedPoint);
+        dimensionDraftAnchors.push(resolveDimensionAnchor(snappedPoint, snapshot()));
+        draftPoint = snappedPoint;
+        if (activeTool === "dimension-total") finalizeDimensionDraft("total");
+        else setStatus(`${dimensionDraftAnchors.length} witness points · press Enter to finish chain`);
       }
-      dimensionDraftStart = null;
-      draftPoint = null;
     }
     render();
   } else if (activeTool === "select" && selected?.type === "wall") {
@@ -677,6 +699,8 @@ function pointerMove(event) {
 function pointerCancel() {
   wallHandleDrag = null;
   dimensionDraftStart = null;
+  dimensionDraftAnchors = [];
+  dimensionDraftPoints = [];
   draftStart = null;
   draftPoint = null;
   isPanning = false;
@@ -784,7 +808,8 @@ window.addEventListener("keydown", (event) => {
   if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") { event.preventDefault(); if (store.undo()) { selected = null; void persistProject(); render(); setStatus("Undo completed"); } }
   else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "y") { event.preventDefault(); if (store.redo()) { selected = null; void persistProject(); render(); setStatus("Redo completed"); } }
-  else if (event.key === "Escape") { draftStart = null; draftPoint = null; setTool("select"); }
+  else if (event.key === "Enter" && activeTool === "dimension-chain") { event.preventDefault(); finalizeDimensionDraft("chain"); }
+  else if (event.key === "Escape") { wallHandleDrag = null; dimensionDraftStart = null; dimensionDraftAnchors = []; dimensionDraftPoints = []; draftStart = null; draftPoint = null; setTool("select"); }
   else if (event.key === "1") setTool("select");
   else if (event.key === "2") setTool("wall");
   else if (event.key === "3") setTool("door");
