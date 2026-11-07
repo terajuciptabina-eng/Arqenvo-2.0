@@ -18,7 +18,7 @@ permissions:
 
 concurrency:
   group: geometry-kernel-benchmark-main
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   brepjs-spike:
