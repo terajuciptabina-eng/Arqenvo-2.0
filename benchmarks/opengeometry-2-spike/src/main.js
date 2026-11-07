@@ -1,7 +1,14 @@
+import * as OpenGeometryPackage from "opengeometry";
 import { Cuboid, OpenGeometry, Vector3 } from "opengeometry";
 
 const output = document.querySelector("#result");
 const startedAt = performance.now();
+
+function prototypeMethods(value) {
+  if (!value) return [];
+  return Object.getOwnPropertyNames(Object.getPrototypeOf(value))
+    .filter((name) => name !== "constructor");
+}
 
 function safeCall(target, name) {
   if (typeof target?.[name] !== "function") return { available: false };
@@ -24,12 +31,8 @@ try {
     depth: 1,
     color: 0x33aa66
   });
-  const prototype = Object.getPrototypeOf(solid);
-  const apiMethods = Object.getOwnPropertyNames(prototype).filter((name) => name !== "constructor");
-  const queryMethods = {};
-  for (const name of ["getVolume", "volume", "measure", "getBounds", "isValid", "validity", "getBrep", "toBrep"]) {
-    queryMethods[name] = safeCall(solid, name);
-  }
+  const geometry = solid.surface?.geometry;
+  const kernel = solid.kernel;
   const result = {
     status: "pass",
     candidate: "opengeometry",
@@ -39,10 +42,23 @@ try {
     wasmSupported: typeof WebAssembly === "object",
     cuboidConstructed: true,
     cuboidConstructor: solid.constructor.name,
-    ownProperties: Object.keys(solid),
-    apiMethods,
-    queryMethods,
-    openGeometryStaticMethods: Object.getOwnPropertyNames(OpenGeometry).filter((name) => typeof OpenGeometry[name] === "function"),
+    packageExports: Object.keys(OpenGeometryPackage).sort(),
+    cuboidApiMethods: prototypeMethods(solid),
+    kernelConstructor: kernel?.constructor?.name ?? null,
+    kernelApiMethods: prototypeMethods(kernel),
+    kernelOwnProperties: kernel ? Object.keys(kernel) : [],
+    config: safeCall(solid, "getConfig"),
+    placement: safeCall(solid, "getPlacement"),
+    editCapabilities: safeCall(solid, "getEditCapabilities"),
+    geometry: geometry ? {
+      constructor: geometry.constructor?.name,
+      positionAttributeCount: geometry.getAttribute?.("position")?.count ?? null,
+      indexCount: geometry.index?.count ?? null,
+      boundingBox: geometry.boundingBox ? {
+        min: geometry.boundingBox.min.toArray(),
+        max: geometry.boundingBox.max.toArray()
+      } : null
+    } : null,
     userAgent: navigator.userAgent
   };
   window.__geometryBenchmark = result;
