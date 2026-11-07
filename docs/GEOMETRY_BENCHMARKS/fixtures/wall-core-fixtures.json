@@ -612,7 +612,8 @@
           ]
         ],
         "thickness": 200,
-        "height": 3000
+        "height": 3000,
+        "baseElevation": 0
       },
       "opening": {
         "id": "door-k12",
