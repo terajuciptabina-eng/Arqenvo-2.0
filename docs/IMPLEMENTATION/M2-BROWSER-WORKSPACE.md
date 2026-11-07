@@ -8,6 +8,7 @@
 - Select, wall, door and window tools.
 - Draw straight semantic walls by dragging.
 - Place centered rectangular door/window openings on a selected host wall.
+- Create basic walls and a default three-skin composite wall (20/160/20 mm) with distinct material IDs.
 - Display wall outlines, composite skin boundaries and opening symbols in a 2D floor-plan canvas.
 - Zoom with the wheel/trackpad; pan with middle mouse, right mouse or Alt-drag.
 - Undo/redo and keyboard shortcuts 1–4, Escape, Ctrl/Cmd+Z and Ctrl/Cmd+Y.

@@ -83,10 +83,25 @@ async function exerciseProfile(profile) {
       await page.locator("#redo").click();
     }
 
+    await page.locator('[data-tool="composite"]').click();
+    await page.mouse.move(bounds.x + bounds.width * 0.15, y + bounds.height * 0.3);
+    await page.mouse.down();
+    await page.mouse.move(bounds.x + bounds.width * 0.45, y + bounds.height * 0.3, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("3 walls"));
+    if (profile.name === "webkit-desktop") {
+      await page.locator('[data-tool="select"]').click();
+      await page.mouse.click(bounds.x + bounds.width * 0.30, y + bounds.height * 0.3);
+      const inspectorText = await page.locator("#inspector-content").innerText();
+      if (!inspectorText.includes("material-brick") || !inspectorText.includes("material-concrete") || !inspectorText.includes("material-plaster")) {
+        throw new Error("Composite skin material identity is not shown in the inspector");
+      }
+    }
+
     await page.locator("#save-project").click();
     await page.waitForFunction(() => document.querySelector("#canvas-status")?.textContent?.startsWith("Saved locally"));
     await page.reload();
-    await page.waitForFunction(() => window.__arqenvoReady === true && document.querySelector("#element-count")?.textContent?.includes("2 walls") && document.querySelector("#element-count")?.textContent?.includes("2 openings"), undefined, { timeout: 15000 });
+    await page.waitForFunction(() => window.__arqenvoReady === true && document.querySelector("#element-count")?.textContent?.includes("3 walls") && document.querySelector("#element-count")?.textContent?.includes("2 openings"), undefined, { timeout: 15000 });
 
     if (profile.name === "webkit-ipad-like") {
       const inspectorDisplay = await page.locator(".inspector").evaluate((node) => getComputedStyle(node).display);
@@ -94,7 +109,7 @@ async function exerciseProfile(profile) {
       if (!(await page.locator('[data-tool="window"]').isVisible())) throw new Error("Window tool is not visible on iPad-like viewport");
     }
     if (errors.length) throw new Error(errors.join("\n"));
-    results.push({ profile: profile.name, status: "pass", viewport: profile.options.viewport, walls: 2, openings: 2, junction: "L", doorWindow: "pass", undoRedo: "pass", browserErrors: errors });
+    results.push({ profile: profile.name, status: "pass", viewport: profile.options.viewport, walls: 3, openings: 2, junction: "L", compositeSkins: 3, doorWindow: "pass", undoRedo: "pass", browserErrors: errors });
   } catch (error) {
     failures.push({ profile: profile.name, error: error instanceof Error ? error.stack ?? error.message : String(error), browserErrors: errors });
   } finally {

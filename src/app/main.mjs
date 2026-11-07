@@ -1,4 +1,4 @@
-import { createOpening, createProject, createWall } from "../bim/model.mjs";
+import { createComposite, createOpening, createProject, createWall } from "../bim/model.mjs";
 import { deriveProjectPlan } from "../geometry/wall-derivation.mjs";
 import { ProjectStore } from "../project/project-store.mjs";
 import { createIndexedDbProjectRepository, createMemoryProjectRepository } from "../storage/project-repository.mjs";
@@ -39,6 +39,7 @@ let dpr = 1;
 const restoredSnapshot = store.snapshot;
 let nextWallNumber = Math.max(0, ...Object.keys(restoredSnapshot.walls).map((id) => Number(id.match(/^wall-(\d+)$/)?.[1] ?? 0))) + 1;
 let nextOpeningNumber = Math.max(0, ...Object.keys(restoredSnapshot.openings).map((id) => Number(id.match(/^(?:door|window)-(\d+)$/)?.[1] ?? 0))) + 1;
+let nextCompositeNumber = Math.max(0, ...Object.keys(restoredSnapshot.composites).map((id) => Number(id.match(/^composite-(\d+)$/)?.[1] ?? 0))) + 1;
 
 const setStatus = (message) => {
   statusText.textContent = message;
@@ -157,7 +158,7 @@ function render() {
   drawPreview();
   const walls = Object.keys(project.walls).length;
   const openings = Object.keys(project.openings).length;
-  emptyState.classList.toggle("hidden", walls + openings > 0 || activeTool === "wall");
+  emptyState.classList.toggle("hidden", walls + openings > 0 || activeTool === "wall" || activeTool === "composite");
   elementCount.textContent = `${walls} walls · ${openings} openings`;
   scaleReadout.textContent = `Zoom ${Math.round(camera.scale * 1000) / 10}%`;
   updateInspector(project);
@@ -217,6 +218,8 @@ function updateInspector(project) {
     const wall = project.walls[selected.id];
     if (!wall) { selected = null; return updateInspector(project); }
     const hosted = Object.values(project.openings).filter((o) => o.hostWallId === wall.id);
+    const composite = wall.compositeId ? project.composites[wall.compositeId] : null;
+    const compositeInfo = composite ? `<div class="property-group"><h3>COMPOSITE SKINS</h3>${composite.skins.map((skin) => `<div class="property-row"><span>${skin.id}</span><span>${skin.thickness} mm</span></div><div class="property-row"><span>Material</span><span>${skin.materialId}</span></div>`).join("")}</div>` : "";
     inspector.innerHTML = `<div class="property-group"><h3>WALL ELEMENT</h3><div class="property-row"><span>Element ID</span><span>${wall.id}</span></div><div class="property-row"><span>Revision</span><span>${wall.revision}</span></div></div>
       <form id="element-form" class="property-form">
         <label>Reference line<select name="referenceLine"><option value="center" ${wall.referenceLine === "center" ? "selected" : ""}>Center</option><option value="left" ${wall.referenceLine === "left" ? "selected" : ""}>Left</option><option value="right" ${wall.referenceLine === "right" ? "selected" : ""}>Right</option></select></label>
@@ -225,7 +228,7 @@ function updateInspector(project) {
         <label>Base elevation (mm)<input name="baseElevation" type="number" step="1" required value="${wall.baseElevation}"></label>
         <button id="apply-element" class="save-button" type="submit">Apply wall changes</button>
       </form>
-      <div class="property-group"><h3>RELATIONSHIPS</h3><div class="property-row"><span>Hosted openings</span><span>${hosted.length}</span></div><div class="property-row"><span>Composite</span><span>${wall.compositeId ?? "Basic"}</span></div></div>`;
+      <div class="property-group"><h3>RELATIONSHIPS</h3><div class="property-row"><span>Hosted openings</span><span>${hosted.length}</span></div><div class="property-row"><span>Composite</span><span>${wall.compositeId ?? "Basic"}</span></div></div>${compositeInfo}`;
     bindInspectorForm("wall", wall.id);
   } else {
     const opening = project.openings[selected.id];
@@ -262,6 +265,7 @@ function setTool(tool) {
   const descriptions = {
     select: "Select · Tap an element to inspect it",
     wall: "Wall · Drag to draw a straight wall",
+    composite: "Composite wall · Drag to draw a three-skin wall",
     door: "Door · Tap a wall to host a 900 × 2100 mm door",
     window: "Window · Tap a wall to host an 800 × 1200 mm window"
   };
@@ -336,7 +340,7 @@ function pointerDown(event) {
     event.preventDefault();
     return;
   }
-  if (activeTool === "wall") {
+  if (activeTool === "wall" || activeTool === "composite") {
     draftStart = [snap(point[0]), snap(point[1])];
     draftPoint = draftStart;
     render();
@@ -381,11 +385,25 @@ function pointerUp() {
   }
   const id = `wall-${nextWallNumber++}`;
   try {
-    const wall = createWall({ id, baseline: [start, end], referenceLine: "center", thickness: 200, baseElevation: 0, height: 3000 });
-    store.transact("Add wall", (draft) => { draft.walls[id] = wall; });
+    if (activeTool === "composite") {
+      const compositeId = `composite-${nextCompositeNumber++}`;
+      const composite = createComposite({
+        id: compositeId,
+        skins: [
+          { id: `${compositeId}:external`, thickness: 20, materialId: "material-brick", function: "finish" },
+          { id: `${compositeId}:core`, thickness: 160, materialId: "material-concrete", function: "core" },
+          { id: `${compositeId}:internal`, thickness: 20, materialId: "material-plaster", function: "finish" }
+        ]
+      });
+      const wall = createWall({ id, baseline: [start, end], referenceLine: "center", thickness: 200, baseElevation: 0, height: 3000, compositeId });
+      store.transact("Add composite wall", (draft) => { draft.composites[compositeId] = composite; draft.walls[id] = wall; });
+    } else {
+      const wall = createWall({ id, baseline: [start, end], referenceLine: "center", thickness: 200, baseElevation: 0, height: 3000 });
+      store.transact("Add wall", (draft) => { draft.walls[id] = wall; });
+    }
     void persistProject();
     selected = { type: "wall", id };
-    setStatus(`Created ${id} · ${Math.round(length)} mm`);
+    setStatus(`Created ${activeTool === "composite" ? "composite " : ""}${id} · ${Math.round(length)} mm`);
   } catch (error) {
     setStatus(error instanceof Error ? error.message : String(error));
   }
