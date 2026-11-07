@@ -31,7 +31,7 @@ test("changing a wall invalidates its hosted opening and connected junction peer
     draft.walls.a = { ...draft.walls.a, thickness: 250, revision: 2 };
   });
   assert.deepEqual(result.changedEntities, ["wall:a"]);
-  assert.deepEqual(result.invalidatedElementIds, ["junction:j1", "opening:door", "wall:a", "wall:b"]);
+  assert.deepEqual(result.invalidatedElementIds, ["geometry:wall:a", "geometry:wall:b", "junction:j1", "opening:door", "wall:a", "wall:b"]);
 });
 
 test("changing a composite invalidates every wall that uses it", () => {
@@ -44,4 +44,15 @@ test("changing a composite invalidates every wall that uses it", () => {
     draft.composites.c = { ...draft.composites.c, skins: [{ ...draft.composites.c.skins[0], materialId: "stone" }], revision: 2 };
   });
   assert.deepEqual(result.invalidatedElementIds, ["composite:c", "geometry:wall:a", "wall:a"]);
+});
+
+test("editing an opening invalidates the host wall representation", () => {
+  const project = createProject();
+  project.walls.w = createWall({ id: "w", baseline: [[0, 0], [2000, 0]], thickness: 200, height: 3000 });
+  project.openings.d = createOpening({ id: "d", type: "door", hostWallId: "w", positionAlongBaseline: 1000, width: 900, height: 2100 });
+  const store = new ProjectStore(project);
+  const result = store.transact("move opening", (draft) => {
+    draft.openings.d = { ...draft.openings.d, positionAlongBaseline: 1100, revision: 2 };
+  });
+  assert.deepEqual(result.invalidatedElementIds, ["geometry:wall:w", "opening:d"]);
 });
