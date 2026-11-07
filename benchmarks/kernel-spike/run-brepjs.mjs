@@ -100,8 +100,8 @@ await runCase("K03", async () => {
 
 const k06 = fixtures.cases.find((item) => item.id === "K06");
 await runCase("K06", async () => {
-  const [[x0, y0], [x1]] = k06.wall.baseline;
-  const length = Math.hypot(x1[0] - x0[0], x1[1] - y0[1]);
+  const [start, end] = k06.wall.baseline;
+  const length = Math.hypot(end[0] - start[0], end[1] - start[1]);
   let y = -k06.wall.thickness / 2;
   const measuredSkinVolumesMm3 = [];
   const stepBytesBySkin = [];
@@ -127,8 +127,8 @@ await runCase("K06", async () => {
 
 const k07 = fixtures.cases.find((item) => item.id === "K07");
 await runCase("K07", async () => {
-  const [[x0, y0], [x1]] = k07.wall.baseline;
-  const length = Math.hypot(x1[0] - x0[0], x1[1] - y0[1]);
+  const [start, end] = k07.wall.baseline;
+  const length = Math.hypot(end[0] - start[0], end[1] - start[1]);
   const overrun = k07.opening.cutToolOverrunMm;
   const wall = k07.wall;
   const opening = k07.opening;
