@@ -21,8 +21,10 @@ wasm.setup();
 const initializationMilliseconds = performance.now() - initStart;
 const { Manifold } = wasm;
 const packageJson = JSON.parse(readFileSync(resolve(here, "node_modules/manifold-3d/package.json"), "utf8"));
-const boxAt = (x, y, z, cx, cy, cz) =>
-  Manifold.cube([x, y, z], true).translate([cx, cy, cz]);
+const boxAt = (x, y, z, cx, cy, cz) => {
+  const base = own(Manifold.cube([x, y, z], true));
+  return own(base.translate([cx, cy, cz]));
+};
 
 const results = [];
 const failures = [];
@@ -111,6 +113,46 @@ runCase("K07", () => {
   };
 });
 
+
+function buildAnalyticVolumeChecks(caseResults) {
+  const byId = new Map(caseResults.map((item) => [item.id, item]));
+  const checks = [];
+  const add = (caseId, measurement, expected, measured) => {
+    checks.push({
+      caseId,
+      measurement,
+      expected,
+      measured,
+      delta: measured - expected,
+      exactMatch: measured === expected
+    });
+  };
+  const k01 = byId.get("K01");
+  if (k01) add("K01", "volumeMm3", k01.expectedVolumeMm3, k01.measuredVolumeMm3);
+  const k03 = byId.get("K03");
+  if (k03) add("K03", "volumeMm3", k03.expectedVolumeMm3, k03.measuredVolumeMm3);
+  const k06 = byId.get("K06");
+  if (k06) {
+    k06.expectedSkinVolumesMm3.forEach((value, index) =>
+      add("K06", `skin[${index}].volumeMm3`, value, k06.measuredSkinVolumesMm3[index])
+    );
+  }
+  const k07 = byId.get("K07");
+  if (k07) {
+    k07.expectedRemainingSkinVolumesMm3.forEach((value, index) =>
+      add("K07", `remainingSkin[${index}].volumeMm3`, value, k07.measuredRemainingSkinVolumesMm3[index])
+    );
+    add("K07", "remainingTotalVolumeMm3", k07.expectedRemainingTotalVolumeMm3, k07.measuredRemainingTotalVolumeMm3);
+  }
+  return {
+    status: checks.length > 0 && checks.every((check) => check.exactMatch) ? "exact-match" : "mismatch",
+    method: "strict equality against analytic axis-aligned box fixture volumes; not an approved general geometry tolerance",
+    checks
+  };
+}
+
+const validation = buildAnalyticVolumeChecks(results);
+
 const report = {
   generatedAt: new Date().toISOString(),
   candidate: "manifold-3d",
@@ -120,6 +162,7 @@ const report = {
   initializationMilliseconds,
   peakRssBytesAfterRun: process.memoryUsage().rss,
   cases: results,
+  validation,
   failures,
   limitations: [
     "Manifold is a triangle-mesh kernel, not an exact CAD B-Rep kernel.",
@@ -133,4 +176,4 @@ const report = {
 writeFileSync(resolve(outputDir, "benchmark-results-manifold.json"), JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));
 for (const shape of live) shape.delete();
-if (failures.length > 0) process.exitCode = 1;
+if (failures.length > 0 || validation.status !== "exact-match") process.exitCode = 1;
