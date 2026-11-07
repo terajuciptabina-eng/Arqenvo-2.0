@@ -285,7 +285,7 @@ await runCase("K11", async () => {
 function stepGeometrySignature(bytes) {
   const text = bytes.toString("utf8");
   const points = [];
-  const pattern = /CARTESIAN_POINT\\s*\\(\\s*'[^']*'\\s*,\\s*\\(([^)]*)\\)\\s*\\)/g;
+  const pattern = /CARTESIAN_POINT\s*\(\s*'[^']*'\s*,\s*\(([^)]*)\)\s*\)/g;
   for (const match of text.matchAll(pattern)) {
     const coordinates = match[1].split(",").map((value) => Number(value.trim()));
     if (coordinates.length === 3 && coordinates.every(Number.isFinite)) {
