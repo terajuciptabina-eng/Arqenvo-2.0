@@ -65,7 +65,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .property-row span:last-child { color: #e0e8f2; font-variant-numeric: tabular-nums; }
 .inspector-foot { border-top: 1px solid #263348; padding: 12px 14px; color: #71839c; font-size: 9px; display: flex; align-items: center; gap: 8px; }
 .foot-key { color: #4dd4bd; border: 1px solid #286a6b; padding: 3px 5px; border-radius: 4px; font-size: 8px; }
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .topbar { height: 54px; padding: 0 10px; }
   .brand { min-width: 0; }
   .project-name { display: none; }
