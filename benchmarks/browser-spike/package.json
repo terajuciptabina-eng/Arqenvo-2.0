@@ -1,0 +1,18 @@
+{
+  "name": "arqenvo2-brepjs-browser-spike",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "test:browser": "node run-webkit.mjs"
+  },
+  "dependencies": {
+    "brepjs": "20.18.0",
+    "occt-wasm": "5.15.0",
+    "playwright": "1.65.0",
+    "vite": "8.3.6"
+  }
+}
