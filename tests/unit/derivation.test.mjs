@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createComposite, createOpening, createWall } from "../../src/bim/model.mjs";
-import { deriveWallPlan } from "../../src/geometry/wall-derivation.mjs";
+import { createComposite, createOpening, createWall, createProject } from "../../src/bim/model.mjs";
+import { deriveProjectPlan, deriveWallPlan } from "../../src/geometry/wall-derivation.mjs";
 
 test("three-skin wall derives ordered material-preserving prisms", () => {
   const wall = createWall({ id: "w", baseline: [[0, 0], [1000, 0]], thickness: 200, height: 3000, baseElevation: 100 });
@@ -33,4 +33,26 @@ test("left and right reference lines offset the wall body from the drawn baselin
   const rightPlan = deriveWallPlan(rightWall);
   assert.deepEqual(leftPlan.skins[0].offsetRange, [-200, 0]);
   assert.deepEqual(rightPlan.skins[0].offsetRange, [0, 200]);
+});
+
+test("project derivation applies an L-junction miter to both wall skins", () => {
+  const project = createProject();
+  project.walls.a = createWall({ id: "a", baseline: [[0, 0], [3000, 0]], thickness: 200, height: 3000 });
+  project.walls.b = createWall({ id: "b", baseline: [[3000, 0], [3000, 2000]], thickness: 200, height: 3000 });
+  const result = deriveProjectPlan(project);
+  assert.equal(result.junctions[0].type, "L");
+  assert.equal(result.walls.a.junctionCaps.length, 1);
+  assert.equal(result.walls.b.junctionCaps.length, 1);
+  assert.deepEqual(result.walls.a.junctionCaps[0].points, result.walls.b.junctionCaps[0].points);
+  assert.notDeepEqual(result.walls.a.skins[0].footprint[1], [3000, -100]);
+});
+
+test("project derivation trims a T branch but preserves its host wall baseline", () => {
+  const project = createProject();
+  project.walls.host = createWall({ id: "host", baseline: [[0, 0], [3000, 0]], thickness: 200, height: 3000 });
+  project.walls.branch = createWall({ id: "branch", baseline: [[1500, 0], [1500, 2000]], thickness: 200, height: 3000 });
+  const result = deriveProjectPlan(project);
+  assert.equal(result.junctions[0].type, "T");
+  assert.equal(result.walls.host.junctionCaps, undefined);
+  assert.equal(result.walls.branch.junctionCaps.length, 1);
 });

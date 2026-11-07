@@ -1,5 +1,5 @@
 import { createOpening, createProject, createWall } from "../bim/model.mjs";
-import { deriveWallPlan } from "../geometry/wall-derivation.mjs";
+import { deriveProjectPlan } from "../geometry/wall-derivation.mjs";
 import { ProjectStore } from "../project/project-store.mjs";
 
 const canvas = document.querySelector("#plan-canvas");
@@ -67,10 +67,7 @@ function drawGrid() {
   }
 }
 
-function drawWall(wall, project) {
-  const composite = wall.compositeId ? project.composites[wall.compositeId] : null;
-  const openings = Object.values(project.openings).filter((opening) => opening.hostWallId === wall.id);
-  const plan = deriveWallPlan(wall, composite, openings);
+function drawWall(wall, project, plan) {
   const outer = plan.skins[0].footprint;
   const last = plan.skins[plan.skins.length - 1].footprint;
   const outline = [outer[0], outer[1], last[2], last[3]];
@@ -130,7 +127,8 @@ function render() {
   context.fillRect(0, 0, width, height);
   drawGrid();
   const project = snapshot();
-  Object.values(project.walls).forEach((wall) => drawWall(wall, project));
+  const derived = deriveProjectPlan(project);
+  Object.values(project.walls).forEach((wall) => drawWall(wall, project, derived.walls[wall.id]));
   drawPreview();
   const walls = Object.keys(project.walls).length;
   const openings = Object.keys(project.openings).length;

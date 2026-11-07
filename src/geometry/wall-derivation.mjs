@@ -1,5 +1,6 @@
 import { validateComposite, validateOpening, validateWall } from "../bim/model.mjs";
-import { leftNormal, normalize, scale, sub } from "./vector.mjs";
+import { dot, leftNormal, normalize, scale, sub } from "./vector.mjs";
+import { solveWallJunctions } from "./junction-solver.mjs";
 
 export function deriveWallPlan(wall, composite = null, openings = []) {
   validateWall(wall);
@@ -75,4 +76,61 @@ export function deriveWallPlan(wall, composite = null, openings = []) {
     skins: skinPlans,
     openings: openingPlans
   };
+}
+
+function interpolatePoint(a, b, amount) {
+  return [a[0] + (b[0] - a[0]) * amount, a[1] + (b[1] - a[1]) * amount];
+}
+
+function applyEndpointCap(plan, wall, endpoint, capPoints) {
+  if (!capPoints || capPoints.length !== 2) return false;
+  const direction = normalize(sub(wall.baseline[1], wall.baseline[0]));
+  const normal = leftNormal(direction);
+  const joint = endpoint === "start" ? wall.baseline[0] : wall.baseline[1];
+  const ordered = [...capPoints].sort((a, b) => dot(sub(a, joint), normal) - dot(sub(b, joint), normal));
+  const totalMin = plan.skins[0].offsetRange[0];
+  const totalMax = plan.skins[plan.skins.length - 1].offsetRange[1];
+  const totalThickness = totalMax - totalMin;
+  if (totalThickness <= 0) return false;
+  for (const skin of plan.skins) {
+    const low = (skin.offsetRange[0] - totalMin) / totalThickness;
+    const high = (skin.offsetRange[1] - totalMin) / totalThickness;
+    const lowPoint = interpolatePoint(ordered[0], ordered[1], low);
+    const highPoint = interpolatePoint(ordered[0], ordered[1], high);
+    if (endpoint === "start") {
+      skin.footprint[0] = lowPoint;
+      skin.footprint[3] = highPoint;
+    } else {
+      skin.footprint[1] = lowPoint;
+      skin.footprint[2] = highPoint;
+    }
+  }
+  plan.junctionCaps ??= [];
+  plan.junctionCaps.push({ endpoint, points: ordered });
+  return true;
+}
+
+export function deriveProjectPlan(project, options = {}) {
+  const walls = Object.values(project.walls ?? {});
+  const junctionResult = solveWallJunctions(walls, options);
+  const plans = Object.fromEntries(walls.map((wall) => {
+    const composite = wall.compositeId ? project.composites?.[wall.compositeId] : null;
+    const openings = Object.values(project.openings ?? {}).filter((opening) => opening.hostWallId === wall.id);
+    return [wall.id, deriveWallPlan(wall, composite, openings)];
+  }));
+  for (const junction of junctionResult.junctions) {
+    if (!junction.geometry) continue;
+    if (junction.type === "L" || junction.type === "ANGLED") {
+      const wallA = project.walls[junction.wallIds[0]];
+      const wallB = project.walls[junction.wallIds[1]];
+      applyEndpointCap(plans[wallA.id], wallA, junction.endpointA, [junction.geometry.outer, junction.geometry.inner]);
+      applyEndpointCap(plans[wallB.id], wallB, junction.endpointB, [junction.geometry.outer, junction.geometry.inner]);
+    } else if (junction.type === "T") {
+      const branchId = junction.endpointA ? junction.wallIds[0] : junction.wallIds[1];
+      const endpoint = junction.endpointA ?? junction.endpointB;
+      const branch = project.walls[branchId];
+      applyEndpointCap(plans[branchId], branch, endpoint, junction.geometry.cap);
+    }
+  }
+  return { walls: plans, junctions: junctionResult.junctions, diagnostics: junctionResult.diagnostics };
 }

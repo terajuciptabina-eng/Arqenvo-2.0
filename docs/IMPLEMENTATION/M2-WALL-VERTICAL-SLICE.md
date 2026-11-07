@@ -9,7 +9,7 @@
 - Ordered composite skins with material identity and total-thickness closure.
 - Straight-wall prism plans with center, left and right reference-line offsets.
 - Door/window opening plans with center/left/right anchors, host-relative placement, sill elevation and through-skin cut extents.
-- Deterministic pairwise junction classification for L, angled, T and cross intersections.
+- Deterministic pairwise junction classification for L, angled, T and cross intersections; L/angled miter and T branch-cap plans are applied to each composite skin footprint during project derivation.
 - L/angled miter-point plans and T-branch cap plans; cross intersections explicitly require a later solid-union operation.
 - Kernel adapter contract that keeps vendor-specific types outside the BIM domain.
 - Atomic project transactions with undo/redo.
@@ -24,7 +24,7 @@ The current solver is therefore an independent deterministic first-pass geometry
 
 ## Known limitations and next gates
 
-1. The current junction solver handles pairwise straight-segment intersections. Multi-wall cluster resolution, overlap/coincident baselines, acute-angle limits, wall priorities and full trim polygon assembly remain unimplemented.
+1. The current junction solver handles pairwise straight-segment intersections and applies the resulting cap to per-skin footprints. Multi-wall cluster resolution, overlap/coincident baselines, acute-angle limits, wall priorities and complete polygon topology validation remain unimplemented.
 2. Composite skin offsets are generated from ordered thicknesses. Profile-based composites, variable skins, finish priority, cut surfaces and material/building-material semantics need more reference evidence.
 3. Opening geometry currently models rectangular through-cuts. Library-part profiles, jamb/reveal/sill geometry, curved-host cut limits and partial-depth cuts remain open.
 4. The adapter contract is defined but no kernel adapter is connected to the application. The BRepJS/OCCT prototype remains isolated in benchmarks.
