@@ -412,7 +412,7 @@ const report = {
   generatedAt: new Date().toISOString(),
   candidate: "brepjs + occt-wasm",
   selectedCase,
-  skippedCurvedCases,
+  skipCurvedCases,
   candidateVersions,
   runtime: { node: process.versions.node, platform: process.platform, architecture: process.arch },
   initializationMilliseconds,
