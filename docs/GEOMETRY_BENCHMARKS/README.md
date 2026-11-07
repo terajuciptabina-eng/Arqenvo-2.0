@@ -8,7 +8,7 @@
 
 ## First runtime benchmark
 
-- [First Runtime Benchmark Report — 2026-11-07](./FIRST_RUNTIME_BENCHMARK_REPORT_2026-11-07.md) — initial BRepJS/OCCT and Manifold Node/WASM results on Ubuntu and macOS. All current analytic volume fixtures matched after correcting benchmark placement and cutter bounds. This is not a final kernel selection or an iPad Safari result.
+- [First Runtime Benchmark Report — 2026-11-07](./FIRST_RUNTIME_BENCHMARK_REPORT_2026-11-07.md) — initial BRepJS/OCCT and Manifold Node/WASM results on Ubuntu and macOS. All current analytic volume fixtures matched after correcting benchmark placement and cutter bounds. The report now includes an automated Playwright WebKit desktop and iPad-like smoke pass; it is still not a physical iPad Safari result or a final kernel selection.
 
 ## Shared fixtures
 
