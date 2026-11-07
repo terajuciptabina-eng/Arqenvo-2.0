@@ -30,6 +30,8 @@ const getCase = (id) => {
 };
 const results = [];
 const failures = [];
+const selectedCase = process.env.CASE_FILTER ?? null;
+const skipCurvedCases = process.env.SKIP_CURVED_CASES === "1";
 const memoryBeforeBytes = process.memoryUsage().rss;
 
 async function saveStep(shape, filename) {
@@ -40,6 +42,8 @@ async function saveStep(shape, filename) {
 }
 
 async function runCase(id, fn) {
+  if (selectedCase && selectedCase !== id) return;
+  if (skipCurvedCases && (id === "K02" || id === "K10")) return;
   console.log(`[${id}] started`);
   const started = performance.now();
   try {
@@ -392,7 +396,7 @@ function buildValidation(caseResults) {
     add("K15", "originalVolumeMm3", getCase("K15").expected.volumeMm3, k15.measuredOriginalVolumeMm3, 0.01);
     add("K15", "roundTripVolumeMm3", getCase("K15").expected.volumeMm3, k15.measuredRoundTripVolumeMm3, getCase("K15").expected.absoluteVolumeToleranceMm3);
   }
-  const expectedIds = fixtures.cases.filter((item) => item.id !== "K14").map((item) => item.id);
+  const expectedIds = selectedCase ? [selectedCase] : fixtures.cases.filter((item) => item.id !== "K14" && !(skipCurvedCases && (item.id === "K02" || item.id === "K10"))).map((item) => item.id);
   const missingCases = expectedIds.filter((id) => !byId.has(id) || byId.get(id).status !== "completed");
   return {
     status: checks.length > 0 && checks.every((check) => check.pass) && missingCases.length === 0 ? "pass" : "fail",
@@ -407,6 +411,8 @@ const memoryAfterBytes = process.memoryUsage().rss;
 const report = {
   generatedAt: new Date().toISOString(),
   candidate: "brepjs + occt-wasm",
+  selectedCase,
+  skippedCurvedCases,
   candidateVersions,
   runtime: { node: process.versions.node, platform: process.platform, architecture: process.arch },
   initializationMilliseconds,
