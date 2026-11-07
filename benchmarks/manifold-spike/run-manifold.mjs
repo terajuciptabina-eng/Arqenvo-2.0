@@ -79,7 +79,7 @@ runCase("K07", () => {
   const cutter = own(boxAt(
     opening.width,
     wall.thickness + 2 * overrun,
-    opening.height + 2 * overrun,
+    opening.height,
     opening.hostPositionAlongBaseline,
     0,
     wall.baseElevation + opening.sillElevation + opening.height / 2
