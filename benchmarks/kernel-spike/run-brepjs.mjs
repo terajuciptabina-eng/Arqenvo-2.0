@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -281,6 +282,23 @@ await runCase("K11", async () => {
   };
 });
 
+function stepGeometrySignature(bytes) {
+  const text = bytes.toString("utf8");
+  const points = [];
+  const pattern = /CARTESIAN_POINT\\s*\\(\\s*'[^']*'\\s*,\\s*\\(([^)]*)\\)\\s*\\)/g;
+  for (const match of text.matchAll(pattern)) {
+    const coordinates = match[1].split(",").map((value) => Number(value.trim()));
+    if (coordinates.length === 3 && coordinates.every(Number.isFinite)) {
+      points.push(coordinates.map((value) => Number(value.toFixed(6))));
+    }
+  }
+  points.sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]);
+  return {
+    pointCount: points.length,
+    sha256: createHash("sha256").update(JSON.stringify(points)).digest("hex")
+  };
+}
+
 await runCase("K12", async () => {
   const item = getCase("K12");
   const length = item.wall.baseline[1][0] - item.wall.baseline[0][0];
@@ -293,12 +311,23 @@ await runCase("K12", async () => {
   );
   const initial = unwrap(cut(wall, makeTool(item.opening.initialPositionAlongBaseline)));
   const moved = unwrap(cut(wall, makeTool(item.opening.movedPositionAlongBaseline)));
+  const initialBytes = Buffer.from(await unwrap(exportSTEP(initial)).arrayBuffer());
+  const movedBytes = Buffer.from(await unwrap(exportSTEP(moved)).arrayBuffer());
+  const initialSignature = stepGeometrySignature(initialBytes);
+  const movedSignature = stepGeometrySignature(movedBytes);
   return {
     expectedInitialVolumeMm3: item.expected.initialVolumeMm3,
     measuredInitialVolumeMm3: volumeOf(initial),
     expectedMovedVolumeMm3: item.expected.movedVolumeMm3,
     measuredMovedVolumeMm3: volumeOf(moved),
-    stepBytes: await saveStep(moved, "K12-moved-host-opening.step")
+    initialGeometrySignature: initialSignature,
+    movedGeometrySignature: movedSignature,
+    movementGeometryChanged: initialSignature.pointCount > 0 &&
+      movedSignature.pointCount > 0 &&
+      initialSignature.sha256 !== movedSignature.sha256,
+    initialStepBytes: initialBytes.length,
+    movedStepBytes: movedBytes.length,
+    stepBytes: movedBytes.length
   };
 });
 
@@ -306,21 +335,41 @@ await runCase("K13", async () => {
   const item = getCase("K13");
   let current;
   const editVolumes = [];
+  const memorySamples = [];
   for (let edit = 1; edit <= item.editCount; edit++) {
     const thickness = edit % 2 === 0 ? item.wall.baseThickness : item.wall.alternateThickness;
     current = box(item.wall.length, thickness, item.wall.height, {
       at: [item.wall.length / 2, 0, item.wall.height / 2]
     });
-    editVolumes.push(volumeOf(current));
+    const measured = volumeOf(current);
+    editVolumes.push(measured);
+    if (edit === 1 || edit % 10 === 0 || edit === item.editCount) {
+      memorySamples.push({
+        edit,
+        rssBytes: process.memoryUsage().rss,
+        measuredVolumeMm3: measured
+      });
+    }
   }
+  const finalStepBytes = Buffer.from(await unwrap(exportSTEP(current)).arrayBuffer());
+  const importedFinal = unwrap(await importSTEP(new Blob([finalStepBytes])));
+  const finalVolumeMm3 = volumeOf(current);
+  const roundTripVolumeMm3 = volumeOf(importedFinal);
   return {
     editCount: item.editCount,
     expectedFinalThickness: item.expected.finalThickness,
-    measuredFinalVolumeMm3: volumeOf(current),
+    measuredFinalVolumeMm3: finalVolumeMm3,
     expectedFinalVolumeMm3: item.expected.finalVolumeMm3,
     firstEditVolumeMm3: editVolumes[0],
     lastEditVolumeMm3: editVolumes.at(-1),
-    distinctVolumesObserved: [...new Set(editVolumes)].length
+    distinctVolumesObserved: [...new Set(editVolumes)].length,
+    expectedDistinctVolumesObserved: 2,
+    everyEditVolumeFinite: editVolumes.every(Number.isFinite),
+    finalRoundTripVolumeMm3: roundTripVolumeMm3,
+    finalRoundTripDeltaMm3: roundTripVolumeMm3 - finalVolumeMm3,
+    finalStepBytes: finalStepBytes.length,
+    memorySamples,
+    memoryMethod: "process RSS sampled at edit 1, every 10 edits, and edit 100; observational only, no forced GC"
   };
 });
 
@@ -339,7 +388,7 @@ await runCase("K15", async () => {
     measuredRoundTripVolumeMm3,
     roundTripVolumeDeltaMm3: measuredRoundTripVolumeMm3 - measuredOriginalVolumeMm3,
     stepBytes: stepBytes.length,
-    stepFileContainsGeometry: stepBytes.length > 0 && stepBytes.toString("utf8").includes("MANIFOLD_SOLID_BREP")
+    stepFileContainsGeometry: stepBytes.length > 0 && stepBytes.toString("utf8").includes("ISO-10303-21") && /(?:MANIFOLD_SOLID_BREP|CLOSED_SHELL|ADVANCED_FACE)/.test(stepBytes.toString("utf8"))
   };
 });
 
@@ -388,9 +437,16 @@ function buildValidation(caseResults) {
   if (k12) {
     add("K12", "initialVolumeMm3", getCase("K12").expected.initialVolumeMm3, k12.measuredInitialVolumeMm3, 0.01);
     add("K12", "movedVolumeMm3", getCase("K12").expected.movedVolumeMm3, k12.measuredMovedVolumeMm3, 0.01);
+    checks.push({ caseId: "K12", metric: "openingGeometryMoved", expected: true, measured: k12.movementGeometryChanged === true, tolerance: 0, pass: k12.movementGeometryChanged === true });
   }
   const k13 = result("K13");
-  if (k13) add("K13", "finalVolumeMm3", getCase("K13").expected.finalVolumeMm3, k13.measuredFinalVolumeMm3, 0.01);
+  if (k13) {
+    add("K13", "finalVolumeMm3", getCase("K13").expected.finalVolumeMm3, k13.measuredFinalVolumeMm3, 0.01);
+    add("K13", "finalRoundTripVolumeMm3", getCase("K13").expected.finalVolumeMm3, k13.finalRoundTripVolumeMm3, 0.01);
+    checks.push({ caseId: "K13", metric: "editCount", expected: getCase("K13").editCount, measured: k13.editCount, tolerance: 0, pass: k13.editCount === getCase("K13").editCount });
+    checks.push({ caseId: "K13", metric: "distinctVolumesObserved", expected: 2, measured: k13.distinctVolumesObserved, tolerance: 0, pass: k13.distinctVolumesObserved === 2 });
+    checks.push({ caseId: "K13", metric: "everyEditVolumeFinite", expected: true, measured: k13.everyEditVolumeFinite === true, tolerance: 0, pass: k13.everyEditVolumeFinite === true });
+  }
   const k15 = result("K15");
   if (k15) {
     add("K15", "originalVolumeMm3", getCase("K15").expected.volumeMm3, k15.measuredOriginalVolumeMm3, 0.01);
