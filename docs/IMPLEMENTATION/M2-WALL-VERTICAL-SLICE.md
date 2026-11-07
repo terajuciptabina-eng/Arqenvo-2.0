@@ -13,6 +13,7 @@
 - L/angled miter-point plans and T-branch cap plans; cross intersections explicitly require a later solid-union operation.
 - Kernel adapter contract that keeps vendor-specific types outside the BIM domain.
 - Atomic project transactions with undo/redo.
+- Dependency graph: composite changes invalidate dependent walls; wall changes invalidate hosted openings and connected junction peers.
 - Node built-in unit tests and GitHub Actions CI.
 
 ## Evidence boundary
@@ -27,7 +28,7 @@ The current solver is therefore an independent deterministic first-pass geometry
 2. Composite skin offsets are generated from ordered thicknesses. Profile-based composites, variable skins, finish priority, cut surfaces and material/building-material semantics need more reference evidence.
 3. Opening geometry currently models rectangular through-cuts. Library-part profiles, jamb/reveal/sill geometry, curved-host cut limits and partial-depth cuts remain open.
 4. The adapter contract is defined but no kernel adapter is connected to the application. The BRepJS/OCCT prototype remains isolated in benchmarks.
-5. ProjectStore provides atomic semantic snapshots and undo/redo, but not yet a dependency graph, persistence, autosave or collaboration.
+5. ProjectStore now invalidates transitive semantic dependents on a committed change. Persistence, autosave and collaboration remain unimplemented.
 6. No browser UI, canvas, 2D/3D viewport or physical iPad Safari test exists yet.
 
 ## Acceptance for this slice

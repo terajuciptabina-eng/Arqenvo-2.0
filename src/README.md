@@ -7,7 +7,8 @@ The first executable domain/geometry vertical slice is now implemented.
 - `geometry/junction-solver.mjs`: endpoint/interior classification, L/angled miter plans and T-branch cap plans; cross junctions explicitly require a later solid-union operation.
 - `geometry/wall-derivation.mjs`: kernel-neutral per-skin prism and hosted-opening cut plans.
 - `geometry/adapter-contract.mjs`: kernel adapter boundary; no candidate kernel is selected or imported by the domain layer.
-- `project/project-store.mjs`: atomic semantic transactions with undo/redo.
+- `bim/dependency-graph.mjs`: explicit wall/composite/opening/junction dependencies and transitive invalidation.
+- `project/project-store.mjs`: atomic semantic transactions with undo/redo and dependency-aware invalidation.
 
 All dimensions use millimetres and Z-up project coordinates. BIM semantics remain authoritative. Derived geometry is disposable and reproducible.
 

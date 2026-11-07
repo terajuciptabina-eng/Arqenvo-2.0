@@ -1,4 +1,5 @@
 import { createProject, validateProject } from "../bim/model.mjs";
+import { buildProjectDependencyGraph, changedProjectEntities } from "../bim/dependency-graph.mjs";
 
 function clone(value) {
   return structuredClone(value);
@@ -23,11 +24,15 @@ export class ProjectStore {
     const draft = clone(this.#state);
     const result = mutator(draft);
     validateProject(draft);
+    const changedEntities = changedProjectEntities(this.#state, draft);
+    const previousGraph = buildProjectDependencyGraph(this.#state);
+    const nextGraph = buildProjectDependencyGraph(draft);
+    const invalidated = [...new Set([...previousGraph.invalidate(changedEntities), ...nextGraph.invalidate(changedEntities)])].sort();
     this.#undo.push({ label, state: this.#state });
     this.#redo = [];
     draft.revision = this.#state.revision + 1;
     this.#state = draft;
-    return { revision: draft.revision, result };
+    return { revision: draft.revision, result, changedEntities, invalidatedElementIds: invalidated };
   }
 
   undo() {
