@@ -111,6 +111,12 @@ async function exerciseProfile(profile) {
       buffer: await readFile(exportedPath)
     });
     await page.waitForFunction(() => document.querySelector("#canvas-status")?.textContent?.includes("Project imported"));
+    await page.locator('[data-view="3d"]').click();
+    if (await page.locator("#view-mode").textContent() !== "3D") throw new Error("3D preview did not activate with model geometry");
+    await page.mouse.wheel(0, -120);
+    await page.locator('[data-view="plan"]').click();
+    if (await page.locator("#view-mode").textContent() !== "2D") throw new Error("Plan view did not restore after 3D preview");
+
     await page.locator("#save-project").click();
     await page.waitForFunction(() => document.querySelector("#canvas-status")?.textContent?.startsWith("Saved locally"));
     await page.reload();

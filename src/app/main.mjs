@@ -11,6 +11,8 @@ const inspector = document.querySelector("#inspector-content");
 const emptyState = document.querySelector("#empty-state");
 const elementCount = document.querySelector("#element-count");
 const scaleReadout = document.querySelector("#scale-readout");
+const viewName = document.querySelector("#view-name");
+const viewMode = document.querySelector("#view-mode");
 const projectId = "arqenvo-local-project";
 let repository;
 let restoredProject = null;
@@ -27,6 +29,7 @@ const store = new ProjectStore(restoredProject ?? createProject({ id: projectId 
 let saveQueue = Promise.resolve();
 
 let activeTool = "select";
+let activeView = "plan";
 let selected = null;
 let draftStart = null;
 let draftPoint = null;
@@ -141,6 +144,110 @@ function drawWall(wall, project, plan) {
   }
 }
 
+
+function toIso(point, z = 0) {
+  const x = point[0] - camera.x;
+  const y = point[1] - camera.y;
+  const isoScale = camera.scale * 0.78;
+  return [
+    width / 2 + (x - y) * isoScale,
+    height * 0.72 - (x + y) * isoScale * 0.34 - z * isoScale * 0.9
+  ];
+}
+
+function pathIso(points) {
+  if (!points.length) return;
+  const first = toIso(points[0].slice(0, 2), points[0][2]);
+  context.beginPath();
+  context.moveTo(first[0], first[1]);
+  for (const point of points.slice(1)) {
+    const projected = toIso(point.slice(0, 2), point[2]);
+    context.lineTo(projected[0], projected[1]);
+  }
+  context.closePath();
+}
+
+function draw3DGrid() {
+  const extent = 6000;
+  const step = 500;
+  context.lineWidth = 1;
+  for (let value = -extent; value <= extent; value += step) {
+    const a = toIso([value, -extent], 0);
+    const b = toIso([value, extent], 0);
+    context.strokeStyle = value === 0 ? "#b8c5d1" : "#dce2e9";
+    context.beginPath(); context.moveTo(a[0], a[1]); context.lineTo(b[0], b[1]); context.stroke();
+    const c = toIso([-extent, value], 0);
+    const d = toIso([extent, value], 0);
+    context.beginPath(); context.moveTo(c[0], c[1]); context.lineTo(d[0], d[1]); context.stroke();
+  }
+}
+
+function draw3DWall(wall, plan) {
+  for (const skin of plan.skins) {
+    const footprint = skin.footprint;
+    const [z0, z1] = skin.zRange;
+    for (let i = 0; i < footprint.length; i += 1) {
+      const next = (i + 1) % footprint.length;
+      pathIso([
+        [footprint[i][0], footprint[i][1], z0],
+        [footprint[next][0], footprint[next][1], z0],
+        [footprint[next][0], footprint[next][1], z1],
+        [footprint[i][0], footprint[i][1], z1]
+      ]);
+      context.fillStyle = i === 0 ? "#aab7c4" : i === 2 ? "#d1d9e1" : "#bcc7d2";
+      context.fill();
+      context.strokeStyle = "#657487";
+      context.lineWidth = selected?.type === "wall" && selected.id === wall.id ? 1.8 : 0.9;
+      context.stroke();
+    }
+    pathIso(footprint.map((point) => [point[0], point[1], z1]));
+    context.fillStyle = skin.function === "core" ? "#c3cdd7" : "#dbe1e7";
+    context.fill();
+    context.strokeStyle = selected?.type === "wall" && selected.id === wall.id ? "#168f82" : "#718094";
+    context.lineWidth = selected?.type === "wall" && selected.id === wall.id ? 2 : 1;
+    context.stroke();
+  }
+}
+
+function draw3DOpenings(project, derived) {
+  for (const wall of Object.values(project.walls)) {
+    const plan = derived.walls[wall.id];
+    const direction = plan.direction;
+    const normal = plan.normal;
+    for (const opening of plan.openings) {
+      for (const skin of plan.skins) {
+        const [offsetMin, offsetMax] = skin.offsetRange;
+        const [start, end] = opening.localRange;
+        const [z0, z1] = opening.zRange;
+        for (const offset of [offsetMin, offsetMax]) {
+          const a = [wall.baseline[0][0] + direction[0] * start + normal[0] * offset, wall.baseline[0][1] + direction[1] * start + normal[1] * offset];
+          const b = [wall.baseline[0][0] + direction[0] * end + normal[0] * offset, wall.baseline[0][1] + direction[1] * end + normal[1] * offset];
+          pathIso([[a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], z1], [a[0], a[1], z1]]);
+          context.fillStyle = "#edf1f5";
+          context.fill();
+          context.strokeStyle = "#526174";
+          context.lineWidth = 1;
+          context.stroke();
+        }
+      }
+    }
+  }
+}
+
+function draw3DPreview(project, derived) {
+  draw3DGrid();
+  const walls = Object.values(project.walls).sort((a, b) => {
+    const av = a.baseline[0][0] + a.baseline[0][1] + a.baseline[1][0] + a.baseline[1][1];
+    const bv = b.baseline[0][0] + b.baseline[0][1] + b.baseline[1][0] + b.baseline[1][1];
+    return bv - av;
+  });
+  for (const wall of walls) draw3DWall(wall, derived.walls[wall.id]);
+  draw3DOpenings(project, derived);
+  context.fillStyle = "#607187";
+  context.font = "10px Inter, sans-serif";
+  context.fillText("ISOMETRIC PREVIEW · DERIVED FROM BIM PARAMETERS", 14, height - 16);
+}
+
 function drawPreview() {
   if (!draftStart || !draftPoint) return;
   const a = toScreen(draftStart), b = toScreen(draftPoint);
@@ -156,11 +263,15 @@ function render() {
   context.clearRect(0, 0, width, height);
   context.fillStyle = "#edf1f5";
   context.fillRect(0, 0, width, height);
-  drawGrid();
   const project = snapshot();
   const derived = deriveProjectPlan(project);
-  Object.values(project.walls).forEach((wall) => drawWall(wall, project, derived.walls[wall.id]));
-  drawPreview();
+  if (activeView === "plan") {
+    drawGrid();
+    Object.values(project.walls).forEach((wall) => drawWall(wall, project, derived.walls[wall.id]));
+    drawPreview();
+  } else {
+    draw3DPreview(project, derived);
+  }
   const walls = Object.keys(project.walls).length;
   const openings = Object.keys(project.openings).length;
   emptyState.classList.toggle("hidden", walls + openings > 0 || activeTool === "wall" || activeTool === "composite");
@@ -306,6 +417,22 @@ function setTool(tool) {
   render();
 }
 
+
+function setView(view) {
+  activeView = view;
+  document.querySelectorAll("[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
+  viewName.textContent = view === "plan" ? "Floor Plan" : "3D Preview";
+  viewMode.textContent = view === "plan" ? "2D" : "3D";
+  if (view === "3d") {
+    draftStart = null;
+    draftPoint = null;
+    setStatus("3D preview · read-only derived view; switch to Plan to edit");
+  } else {
+    setStatus("Floor Plan · semantic model editing");
+  }
+  render();
+}
+
 function projectToSegment(point, wall) {
   const [a, b] = wall.baseline;
   const dx = b[0] - a[0], dy = b[1] - a[1];
@@ -370,6 +497,10 @@ function pointerDown(event) {
     isPanning = true;
     lastPointer = [event.clientX, event.clientY];
     event.preventDefault();
+    return;
+  }
+  if (activeView === "3d") {
+    setStatus("3D preview is read-only · switch to Plan to edit elements");
     return;
   }
   if (activeTool === "wall" || activeTool === "composite") {
@@ -446,6 +577,11 @@ function zoomAt(event) {
   event.preventDefault();
   const rect = canvas.getBoundingClientRect();
   const px = event.clientX - rect.left, py = event.clientY - rect.top;
+  if (activeView === "3d") {
+    camera.scale = Math.max(0.035, Math.min(1.2, camera.scale * (event.deltaY < 0 ? 1.12 : 0.89)));
+    render();
+    return;
+  }
   const before = toWorld(px, py);
   camera.scale = Math.max(0.035, Math.min(1.2, camera.scale * (event.deltaY < 0 ? 1.12 : 0.89)));
   const after = toWorld(px, py);
@@ -455,6 +591,7 @@ function zoomAt(event) {
 }
 
 document.querySelectorAll("[data-tool]").forEach((button) => button.addEventListener("click", () => setTool(button.dataset.tool)));
+document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
 document.querySelector("#start-wall").addEventListener("click", () => setTool("wall"));
 document.querySelector("#undo").addEventListener("click", () => { if (store.undo()) { selected = null; void persistProject(); setStatus("Undo completed"); render(); } });
 document.querySelector("#redo").addEventListener("click", () => { if (store.redo()) { selected = null; void persistProject(); setStatus("Redo completed"); render(); } });

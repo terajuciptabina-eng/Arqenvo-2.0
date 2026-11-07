@@ -26,4 +26,4 @@
 
 ## Browser acceptance
 
-The WebKit application smoke workflow exercises two perpendicular walls and live L-junction derivation, hosted door and window placement (including touch tap on the iPad-like profile), undo/redo and responsive inspector collapse on desktop and iPad-like profiles.
+The WebKit application smoke workflow exercises two perpendicular walls and live L-junction derivation, hosted door and window placement (including touch tap on the iPad-like profile), three-skin composite creation, plan/3D preview switching, JSON export/import, IndexedDB reload, undo/redo and responsive inspector collapse on desktop and iPad-like profiles.

@@ -40,8 +40,8 @@
 
         <main class="drawing-area">
           <div class="view-toolbar">
-            <div class="view-title"><span class="view-icon">▦</span><strong>Floor Plan</strong><span class="view-tag">2D</span></div>
-            <div class="view-tools"><span class="hint">Scroll to zoom · Middle-drag to pan</span><span class="scale-readout" id="scale-readout">1 : 100</span></div>
+            <div class="view-title"><span class="view-icon">▦</span><strong id="view-name">Floor Plan</strong><span class="view-tag" id="view-mode">2D</span></div>
+            <div class="view-tools"><button class="view-switch active" data-view="plan">Plan</button><button class="view-switch" data-view="3d">3D Preview</button><span class="hint">Scroll to zoom · Middle-drag to pan</span><span class="scale-readout" id="scale-readout">Zoom 16%</span></div>
           </div>
           <div class="canvas-wrap">
             <canvas id="plan-canvas" aria-label="2D floor plan editor"></canvas>
