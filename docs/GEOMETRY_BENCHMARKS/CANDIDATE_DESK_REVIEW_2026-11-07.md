@@ -1,6 +1,6 @@
 # Geometry Kernel Candidate Desk Review — 2026-11-07
 
-**Status:** Desk research only. No runtime benchmark has been executed. No kernel is selected.  
+**Status:** Initial runtime baseline completed for K01, K03, K06 and K07. BRepJS + OCCT-WASM passed exact analytic-volume checks on Ubuntu and macOS and a Playwright WebKit desktop/iPad-like smoke test. Manifold passed the applicable mesh-control fixtures. The full K01–K15 matrix remains incomplete. No production kernel is selected.  
 **Purpose:** Narrow the candidates for the first isolated ARQENVO 2.0 prototype.  
 **Decision authority:** Existing ADR-0002 remains in force until the full benchmark and license gates pass.
 
@@ -90,6 +90,8 @@ Official sources:
 
 ## 4. Preliminary ranking for prototype order (not final kernel selection)
 
+**Runtime update (2026-11-07):** BRepJS + OCCT-WASM has now passed the initial exact-BRep fixture set (K01, K03, K06, K07) on Ubuntu x64 and macOS arm64, and passed one browser WASM solid test in Playwright WebKit desktop and iPad-like emulation. Manifold 3.5.4 matched its applicable K01, K03 and K07 mesh-control volumes and reported `NoError`. See [First Runtime Benchmark Report](./FIRST_RUNTIME_BENCHMARK_REPORT_2026-11-07.md). These results establish a prototype lead, not a final production selection.
+
 | Priority | Candidate | Reason to test |
 |---:|---|---|
 | 1 | brepjs + occt-wasm | Current published v20/v5 package line, exact B-Rep API, explicit WASM/worker integration and browser guidance |
@@ -141,4 +143,4 @@ Do not approve a production kernel until all of the following are complete:
 
 ## 7. Immediate next engineering action
 
-Create an isolated kernel spike only after the benchmark fixture schema is agreed. It must not become application source code and must not decide the final architecture by accident. First prove K01, K03, K06 and K07 for brepjs/occt-wasm and the exact published OpenGeometry package line, then expand to the full matrix. If one candidate cannot preserve skin identity or reliably cut a hosted opening, record the failure rather than adding a one-off workaround.
+The first isolated spike is now in place and K01, K03, K06 and K07 have an automated baseline. Next, expand the shared fixture schema and adapters to K02, K04, K05, K08–K13 and K15, then prove the exact published OpenGeometry package/API line. Keep the benchmark separate from application source code. If a candidate cannot preserve skin identity, generate a valid junction or reliably cut a hosted opening, record the failure rather than adding a one-off workaround. K14 remains a real-device Safari validation gate: the automated WebKit iPad-like profile is only a preliminary browser check.
