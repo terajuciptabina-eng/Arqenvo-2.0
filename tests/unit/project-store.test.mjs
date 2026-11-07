@@ -16,10 +16,7 @@ test("project transactions are atomic and undo/redo restore snapshots", () => {
   assert.throws(() => store.transact("invalid", (draft) => { draft.walls.bad = { id: "bad" }; }));
   assert.equal(store.snapshot.walls.bad, undefined);
 });
-import test from "node:test";
-import assert from "node:assert/strict";
-import { createProject, createWall, createOpening, createComposite } from "../../src/bim/model.mjs";
-import { ProjectStore } from "../../src/project/project-store.mjs";
+import { createOpening, createComposite } from "../../src/bim/model.mjs";
 
 test("changing a wall invalidates its hosted opening and connected junction peers", () => {
   const project = createProject();
