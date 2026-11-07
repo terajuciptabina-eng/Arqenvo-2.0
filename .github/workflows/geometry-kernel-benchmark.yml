@@ -52,7 +52,7 @@ jobs:
         id: benchmark
         run: npm run bench
         env:
-          SKIP_CURVED_CASES: "1"
+          CASE_FILTER: K01
 
       - name: Publish benchmark summary
         if: always()
@@ -98,6 +98,49 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+
+
+  brepjs-expanded-cases:
+    name: brepjs expanded fixture / ${{ matrix.case }}
+    strategy:
+      fail-fast: false
+      matrix:
+        case: [K04, K05, K08, K09, K11, K12, K13, K15]
+    runs-on: macos-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: benchmarks/kernel-spike
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: benchmarks/kernel-spike/package.json
+
+      - name: Install pinned direct dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run one isolated architectural fixture
+        run: npm run bench
+        env:
+          CASE_FILTER: ${{ matrix.case }}
+
+      - name: Upload isolated fixture evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brepjs-expanded-${{ matrix.case }}
+          path: |
+            benchmarks/kernel-spike/benchmark-output/
+            benchmarks/kernel-spike/package-lock.json
+          if-no-files-found: warn
+          retention-days: 30
 
   brepjs-curved-cases:
     name: brepjs curved geometry / ${{ matrix.case }}
