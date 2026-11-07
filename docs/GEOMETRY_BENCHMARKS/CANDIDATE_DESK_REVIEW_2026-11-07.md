@@ -1,163 +1,93 @@
 # Geometry Kernel Candidate Desk Review — 2026-11-07
 
-**Status:** Initial runtime baseline completed for K01, K03, K06 and K07. BRepJS + OCCT-WASM passed exact analytic-volume checks on Ubuntu and macOS and a Playwright WebKit desktop/iPad-like smoke test. Manifold passed the applicable mesh-control fixtures. The full K01–K15 matrix remains incomplete. No production kernel is selected.  
-**Purpose:** Narrow the candidates for the first isolated ARQENVO 2.0 prototype.  
-**Decision authority:** Existing ADR-0002 remains in force until the full benchmark and license gates pass.
+**Status:** Preliminary technical comparison. BRepJS + OCCT-WASM has historical baseline evidence and Run #37 is in progress. Manifold Ubuntu has a verified Run #37 baseline for K01, K03 and K07. OpenGeometry 2.0.18 has a single Boolean browser probe whose final Run #37 result is still pending. No production kernel is selected.  
+**Decision authority:** Existing ADR-0002 remains in force until the complete benchmark and license gates are satisfied.
 
 ## 1. Executive conclusion
 
-Prioritise a controlled prototype comparison of:
+Continue an isolated prototype comparison, not production integration:
 
-1. **brepjs 20.x + occt-wasm 5.x** — currently published TypeScript API over an Open CASCADE WebAssembly kernel.
-2. **OpenGeometry** — browser-native B-Rep CAD kernel with Rust/WASM and Three.js SDK; resolve the repository/npm release mismatch before implementation.
-3. **Manifold 3.x** — robust manifold triangle-mesh Boolean library as a mesh-kernel control/possible secondary representation.
+1. **BRepJS 20.18.0 + OCCT-WASM 5.15.0** — leading exact B-Rep prototype based on prior results; Run #37's expanded suite remains unverified while jobs are pending.
+2. **OpenGeometry 2.0.18** — run a limited browser Boolean probe against its pinned package API. Its measured output is tessellated mesh volume and must not be overstated as native exact-volume proof.
+3. **Manifold 3.5.4** — mesh Boolean/topology control and possible secondary derived-mesh layer; not an exact B-Rep candidate.
+4. **Direct opencascade.js** — retain as fallback investigation only if wrapper limitations block required OCCT operations.
 
-Keep direct **opencascade.js** as a fallback investigation if the wrappers fail to expose a required OCCT capability. Do not select based on documentation claims alone.
+Prototype order is not a performance ranking, production decision or legal approval.
 
 ## 2. Candidate comparison
 
-| Candidate | Geometry model | Browser/WASM evidence | Initial fit | Main risk |
-|---|---|---|---|---|
-| brepjs + occt-wasm | Exact B-Rep | WASM; worker-ready; Three.js mesh adapter | Strong B-Rep candidate with typed API and STEP workflow | OCCT kernel LGPL obligations; WASM SIMD/tail-call browser baseline; API/version policy |
-| OpenGeometry | B-Rep solids and wires | Rust/WASM; Three.js SDK; tessellation worker | Strong browser-native candidate for extrude, sweep and Booleans | GitHub README describes 3.0.0 while npm search results surfaced 2.0.x packages; API/package mismatch must be resolved |
-| Manifold 3.x | Manifold triangle meshes | JS/TS npm binding and browser WASM | Strong Boolean/topology robustness candidate for derived mesh operations | Not a B-Rep kernel; input must already be manifold |
-| direct opencascade.js | OCCT B-Rep | Emscripten/WASM port | Broad OCCT capability and direct access if wrappers are insufficient | Low-level integration, bundler/build complexity, larger distribution and LGPL obligations |
+| Candidate | Geometry model | Current evidence | Principal limitations |
+|---|---|---|---|
+| BRepJS + OCCT-WASM | Exact B-Rep | Earlier K01/K03/K06/K07 and Playwright WebKit smoke baseline; Run #37 expanded suite pending | Need full fixture coverage, independent validity/topology inspection, physical iPad Safari, memory/worker review, LGPL review |
+| OpenGeometry 2.0.18 | Analytic B-Rep with tessellated mesh view | Probe source performs one cuboid subtraction and calls serialized-BRep validation; Run #37 job pending | One straight case only; measured volume from BufferGeometry; no curved, multiskin, junction or STEP parity |
+| Manifold 3.5.4 | Manifold triangle mesh | Run #37 Ubuntu K01/K03/K07 exact volume match; `NoError` | Not exact B-Rep; current fixture coverage narrow; skin metadata persistence untested |
+| Direct opencascade.js | OCCT B-Rep | Desk review only | Package/OCCT version, browser build, API surface, maintenance and integration cost unverified |
 
-## 3. Candidate findings from official project material
+## 3. Technical findings
 
-### brepjs + occt-wasm
+### BRepJS + OCCT-WASM
 
-The brepjs v20 documentation describes an exact B-Rep API, a TypeScript type system for topology invariants, an OCCT WASM kernel as the current default, Web Worker support, a Three.js mesh adapter and STEP/IGES/DXF/GLB-related exchange workflows. The official installation guide supports browser WASM and documents Vite bundling. Its first-solid and Boolean guides provide explicit primitive, Boolean, measurement and export calls.
+Prior reports describe brepjs 20.18.0 with occt-wasm 5.15.0 and successful exact B-Rep volume operations. The browser harness previously passed Playwright WebKit desktop and iPad-like emulation using explicit kernel initialization. This is not physical iPad Safari validation.
 
-The npm results retrieved on 2026-11-07 surfaced brepjs 20.18.0 and occt-wasm 5.15.0. Treat these as candidate versions observed during this review, not as an instruction to install unpinned latest versions later.
+The current runner source includes K01–K13 and K15. The main full-suite workflow sets `SKIP_CURVED_CASES=1`, and K02/K10 run as separate jobs. Thus a complete BRepJS verification needs both the main suite and both curved jobs. Run #37 has not yet completed at the time of this report update.
 
-The brepjs wrapper is Apache-2.0, but the default occt-wasm kernel's compiled WASM output is LGPL-2.1-only. The optional brepkit kernel is described as AGPL-3.0-only or commercial in current 3.x documentation; do not adopt that optional kernel for a proprietary hosted product without a separate legal and commercial decision. brepjs's own license does not override the selected kernel's license.
+The source also shows important interpretation boundaries:
+- K03/K04/K05 consume precomputed wall-end solids; they do not test ARQENVO BIM junction priority logic.
+- K06/K07/K08 create separate skin solids and compare volumes; application-level material metadata persistence is not established.
+- K12 compares initial and moved opening cut volumes. Equal volumes are expected and do not establish the opening position changed geometrically.
+- K13 alternates regenerated box dimensions 100 times. RSS before/after is only a coarse process observation, not a controlled leak test.
+- K15 exports/imports STEP and compares volume; independent STEP structure/topology inspection is still required.
 
-The occt-wasm package states that its WASM build requires SIMD, tail calls and WASM exception support, and lists Safari 17.2+ as the earliest verified Safari version. This is a published compatibility floor, not proof of performance or stability on iPad Safari.
+The earlier package/compatibility review notes that the brepjs wrapper is Apache-2.0 while the default occt-wasm kernel is LGPL-2.1-only. This must receive a proper distribution and hosted-service legal review before production.
 
-Potential fit: strong B-Rep abstraction and exact CAD workflow.  
-Prototype questions: API maturity, memory lifetime/disposal, custom wall profile operations, browser worker integration, WASM payload and iPad Safari performance, LGPL distribution obligations, and whether the wrapper exposes all needed topology operations.
+### OpenGeometry 2.0.18
 
-Official sources:
-- https://brepjs.dev/
-- https://brepjs.dev/getting-started/install
-- https://brepjs.dev/getting-started/first-solid
-- https://brepjs.dev/tasks/booleans
-- https://www.npmjs.com/package/brepjs
-- https://www.npmjs.com/package/occt-wasm
+The repository upstream README currently describes a separate 3.0 API line; the benchmark pins npm `opengeometry@2.0.18`. Do not mix 2.0 package declarations with 3.0 repository examples.
 
-### OpenGeometry
+The current browser source:
+- initializes WASM and creates a Cuboid;
+- creates one analytic cuboid host/cutter;
+- calls `booleanSubtraction`;
+- measures the resulting Three.js `BufferGeometry` volume against 0.222 m³;
+- serializes the B-Rep and calls `validateAnalyticBrep`.
 
-The current OpenGeometry GitHub repository README describes version 3.0.0. It documents B-Rep solids, Boolean union/subtract/intersect, extrusion, sweep and revolve, STEP export, body validity queries, transaction marks/rollback and tessellation in a worker or inline. It integrates directly with Three.js and is distributed under MPL-2.0.
+This probe is useful evidence that the pinned 2.0 browser path has a real Boolean operation, not merely initialization. However, it is a single straight cuboid case. Mesh volume and serialized-BRep validation are separate outputs; neither should be generalized to wall junctions, multiskin openings, curved profiles or STEP workflows without additional evidence.
 
-**Release mismatch discovered:** npm search results retrieved on 2026-11-07 surfaced OpenGeometry 2.0.x package versions, while the repository's current README describes 3.0.0. The exact 3.0.0 installable npm artifact was not established by this review. Do not write a production integration against the 3.0 README until the published package/version and its matching source/API are confirmed.
+### Manifold 3.5.4
 
-The project states that its API and package structure are evolving. Its 3.0 feature list excludes curves other than lines, circles and arcs, and lists some capabilities that existed in 2.0 as absent in 3.0. The prototype must therefore pin an exact published version and validate every required profile/curve workflow.
+Run #37 Ubuntu produced:
+- K01 600,000,000 mm³ exact match, `NoError`;
+- K03 2,970,000,000 mm³ exact match, `NoError`;
+- K07 remaining skin volumes 22,200,000 / 177,600,000 / 22,200,000 mm³ exact match, each `NoError`;
+- total K07 222,000,000 mm³ exact match;
+- no benchmark failures.
 
-**Runtime probe update (2026-11-07):** The exact npm package `opengeometry@2.0.18` initialized its WASM runtime and constructed a `Cuboid` in Playwright WebKit desktop and iPad-like emulation. The wrapper itself exposes placement/configuration/edit methods, while its nested `OGAnalyticBrep` kernel object exposes lower-level B-Rep operations and queries:
+Manifold's representation is a triangle mesh. This result does not qualify it as the authoritative B-Rep model. It may be evaluated for mesh Boolean or derived display geometry only.
 
-- `boolean_brep`, `subtract_planar_cutters`, `shell`
-- `get_bounds`, `get_brep_serialized`, `get_face_count`, `get_edge_count`, `get_vertex_count`
-- `classify_point`, `face_normal_at`, `get_boolean_report_serialized`
-- `export_step`, `prepare_ifc_exchange`, `tessellate`
+### Direct opencascade.js
 
-The package also exports `booleanUnion`, `booleanSubtraction`, `booleanIntersection`, `executeBooleanSubtractionMany`, `exportBrepToStep` and `validateAnalyticBrep`. These signatures still need to be confirmed from the installed 2.0.18 declarations before using them in the same-fixture benchmark.
+Keep as a fallback pending exact package/OCCT version verification, browser build reproducibility, exposed API inspection, memory and asset cost, and maintenance review. Do not infer the version of OCCT embedded in a package from the current native OCCT release.
 
-- Desktop WebKit: WASM initialization + cuboid construction 42 ms.
-- iPad-like WebKit: WASM initialization + cuboid construction 43 ms.
-- The resulting unit cuboid generated a BufferGeometry with 24 position vertices and 36 indices.
-- Package: opengeometry 2.0.18; Three.js 0.184.0; declared license MPL-2.0.
-- The package's current npm readme uses the 2.0 API. The upstream repository README explicitly says it describes 3.0 and that the 2.0 line has a different API. Keep those API lines separate.
+## 4. Selection gate and outstanding evidence
 
-This is still an initialization/construction probe, not a Boolean, curved-wall, topology or STEP validation pass.
+| Requirement | Status |
+|---|---|
+| Identical semantic inputs and documented tolerance | Partial; fixture shared, tolerance policy not approved |
+| BRepJS K01–K15 applicable suite | Run #37 pending; K02/K10 separate jobs |
+| Wall junction geometry and BIM priority logic | Kernel Boolean fixtures only; BIM solver not tested |
+| Composite skin identity/material attributes | Volumes separated; semantic persistence not verified |
+| Door/window cuts, straight and curved | K07 earlier baseline; K08/K09/K10 require current evidence |
+| Thickness/edit/move regeneration | K11–K13 need output review; K12 requires geometric position proof |
+| STEP round-trip | Historical exports; current K15 artifact needs independent inspection |
+| Browser and physical iPad Safari | Prior Playwright smoke; physical device not tested |
+| Worker responsiveness and memory stability | Not sufficiently measured |
+| Production license/legal review | Not approved |
+| Replaceable adapter in application | Not implemented or approved |
 
-Potential fit: browser-first, Rust/WASM and Three.js integration.  
-Prototype questions: published version/API alignment, custom profile boundaries, exact arc handling, B-Rep access, Boolean reliability for multiple wall skins/openings, iPad Safari memory, rollback semantics, and whether worker execution covers geometry computation or only tessellation.
+## 5. Current recommendation
 
-Official sources:
-- https://github.com/OpenGeometry-io/OpenGeometry
-- https://www.npmjs.com/package/opengeometry
-- https://opengeometry.io/
+Do not select or integrate a production geometry kernel yet.
 
-### Manifold
+Keep BRepJS + OCCT-WASM as the lead exact B-Rep prototype for further verification, retain OpenGeometry 2.0.18 as a limited browser candidate pending broader proof, and retain Manifold only as a mesh control/possible secondary layer. Do not decide on timing numbers alone.
 
-The official documentation describes Manifold as a library for creating and operating on manifold triangle meshes. It provides a JS/TS npm package and browser WASM support. Its stated goal is reliable manifold output and its Boolean algorithm is designed around manifold mesh input. It supports arbitrary vertex properties and material mapping.
-
-Potential fit: a strong candidate for mesh Boolean and derived watertight display geometry.  
-Limitation: it is not a B-Rep kernel. It cannot be the authoritative parametric CAD representation if ARQENVO requires exact curves, faces/edges/vertices and CAD exchange semantics. Its mesh output may still be useful as a secondary representation.
-
-Official sources:
-- https://manifoldcad.org/docs/html/
-- https://manifoldcad.org/docs/jsapi/
-- https://github.com/elalish/manifold
-
-### Open CASCADE Technology / opencascade.js
-
-The current official OCCT documentation describes a broad C++ CAD/CAM/CAE platform with geometric and topological modeling, modeling algorithms, mesh, visualization, STEP/IGES exchange and application framework capabilities. The official documentation identifies LGPL-2.1 with an additional exception and explicitly describes obligations for proprietary applications, including notices, source availability and ensuring users can run a modified OCCT component.
-
-The opencascade.js project is an Emscripten/WASM port, but its published repository/package history needs careful version verification; the stable 1.1.1 package and current 2.0 beta documentation are not interchangeable. The project README has referenced an older OCCT version. Do not assume the latest native OCCT release is the version included in a particular WASM package.
-
-Potential fit: extensive B-Rep/CAD functionality if the required APIs are exposed.  
-Risk: integration/build complexity, WASM payload, wrapper maintenance and LGPL obligations.
-
-Official sources:
-- https://www.occt3d.com/dev/doc/overview/html/index.html
-- https://github.com/donalffons/opencascade.js
-- https://ocjs.org/
-
-## 4. Preliminary ranking for prototype order (not final kernel selection)
-
-**Runtime update (2026-11-07):** BRepJS + OCCT-WASM has now passed the initial exact-BRep fixture set (K01, K03, K06, K07) on Ubuntu x64 and macOS arm64, and passed one browser WASM solid test in Playwright WebKit desktop and iPad-like emulation. Manifold 3.5.4 matched its applicable K01, K03 and K07 mesh-control volumes and reported `NoError`. See [First Runtime Benchmark Report](./FIRST_RUNTIME_BENCHMARK_REPORT_2026-11-07.md). These results establish a prototype lead, not a final production selection.
-
-| Priority | Candidate | Reason to test |
-|---:|---|---|
-| 1 | brepjs + occt-wasm | Current published v20/v5 package line, exact B-Rep API, explicit WASM/worker integration and browser guidance |
-| 2 | OpenGeometry | Strong browser-native direction, but confirm published package/API alignment before coding |
-| 3 | Manifold | Establish robust mesh Boolean baseline and evaluate as a possible secondary mesh engine |
-| 4 | direct opencascade.js | Retain as fallback if higher-level wrappers block required OCCT operations |
-
-This ranking only orders the prototype work. It is not a performance, quality or legal-compliance verdict.
-
-## 5. Benchmark plan mapped to ARQENVO wall evidence
-
-Use identical semantic input fixtures and tolerances for every candidate. Keep the ARQENVO wall-junction algorithm outside the kernel so the benchmark distinguishes BIM connection logic from generic solid operations.
-
-| Test | Scenario | Required observation |
-|---|---|---|
-| K01 | 1000 × 200 × 3000 mm straight wall | exact dimensions, valid closed solid, mesh generation |
-| K02 | Arc/curved wall segment | exact arc/profile support and stable sweep/extrude |
-| K03 | L-junction of two walls | wall solver output can be converted to valid solid(s) |
-| K04 | T-junction | no invalid topology after wall-end trimming |
-| K05 | Cross-junction | deterministic multi-solid result and no unintended internal faces |
-| K06 | 3-skin composite wall | separate skin boundaries and material IDs retained |
-| K07 | Door opening through all skins | Boolean success, valid solid and correct opening dimensions |
-| K08 | Window with sill/reveal | wall cut plus independent reveal/jamb geometry |
-| K09 | Multiple openings | repeated Boolean success and stable topology |
-| K10 | Curved wall opening | valid cut limits and topology |
-| K11 | Rebuild after wall thickness change | no stale geometry and deterministic result |
-| K12 | Rebuild after host/opening movement | dependency invalidation and regeneration |
-| K13 | 100 repeated edits | no accumulating drift, leaks or invalid shapes |
-| K14 | iPad Safari | load time, peak memory, interaction responsiveness, worker/WASM support |
-| K15 | export/reimport | STEP round-trip if supported; otherwise record limitation |
-
-Record for each run: exact package/version, browser/device/OS, WASM size, initialisation time, operation latency, peak memory if measurable, validity result, topology counts, dimensional deviation, worker responsiveness, failure logs and license review.
-
-## 6. Selection gate
-
-Do not approve a production kernel until all of the following are complete:
-
-- [ ] Candidate versions pinned and reproducible.
-- [ ] Same K01–K15 fixtures run on each applicable candidate.
-- [ ] Topology validity and dimensional checks pass agreed tolerances.
-- [ ] L/T/cross wall joins are tested with ARQENVO's own BIM solver.
-- [ ] Composite skins retain per-skin identity and material attributes.
-- [ ] Door/window cuts pass on straight and curved hosts.
-- [ ] Repeated edits do not leave stale geometry or memory leaks.
-- [ ] Desktop and iPad Safari tests completed.
-- [ ] License and hosted-service/distribution obligations reviewed.
-- [ ] Kernel adapter remains replaceable.
-- [ ] ADR-0002 is updated with results and final decision.
-
-## 7. Immediate next engineering action
-
-The first isolated spike is now in place and K01, K03, K06 and K07 have an automated baseline. Next, expand the shared fixture schema and adapters to K02, K04, K05, K08–K13 and K15, then prove the exact published OpenGeometry package/API line. Keep the benchmark separate from application source code. If a candidate cannot preserve skin identity, generate a valid junction or reliably cut a hosted opening, record the failure rather than adding a one-off workaround. K14 remains a real-device Safari validation gate: the automated WebKit iPad-like profile is only a preliminary browser check.
+The next gate is terminal evidence from Run #37, independent review of the BRepJS artifact results (especially K12/K13/K15), broader OpenGeometry fixtures, physical-device Safari, controlled performance and memory checks, and legal assessment of the actual distributed WASM binaries and wrappers.
