@@ -307,9 +307,6 @@ await runCase("K12", async () => {
   console.log("[K12] loading fixture");
   const item = getCase("K12");
   const length = item.wall.baseline[1][0] - item.wall.baseline[0][0];
-  console.log("[K12] creating host wall");
-  const wall = makeWallBox(item.wall, length);
-  mark("host wall created", caseStarted);
   const makeTool = (position) => box(
     item.opening.width,
     item.wall.thickness + 2,
@@ -319,8 +316,11 @@ await runCase("K12", async () => {
   console.log("[K12] creating initial cutter");
   const initialTool = makeTool(item.opening.initialPositionAlongBaseline);
   mark("initial cutter created", caseStarted);
+  console.log("[K12] creating independent host for initial opening state");
+  const initialWall = makeWallBox(item.wall, length);
+  mark("initial host created", caseStarted);
   console.log("[K12] executing initial Boolean cut");
-  const initial = unwrap(cut(wall, initialTool));
+  const initial = unwrap(cut(initialWall, initialTool));
   mark("initial Boolean cut completed", caseStarted);
   console.log("[K12] measuring initial result");
   const measuredInitialVolumeMm3 = volumeOf(initial);
@@ -328,8 +328,11 @@ await runCase("K12", async () => {
   console.log("[K12] creating moved cutter");
   const movedTool = makeTool(item.opening.movedPositionAlongBaseline);
   mark("moved cutter created", caseStarted);
-  console.log("[K12] executing moved Boolean cut against original host");
-  const moved = unwrap(cut(wall, movedTool));
+  console.log("[K12] creating independent host for moved opening state");
+  const movedWall = makeWallBox(item.wall, length);
+  mark("moved host created", caseStarted);
+  console.log("[K12] executing moved Boolean cut");
+  const moved = unwrap(cut(movedWall, movedTool));
   mark("moved Boolean cut completed", caseStarted);
   console.log("[K12] measuring moved result");
   const measuredMovedVolumeMm3 = volumeOf(moved);
