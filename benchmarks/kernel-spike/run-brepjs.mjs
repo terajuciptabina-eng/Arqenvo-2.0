@@ -451,6 +451,14 @@ function buildValidation(caseResults) {
   if (k15) {
     add("K15", "originalVolumeMm3", getCase("K15").expected.volumeMm3, k15.measuredOriginalVolumeMm3, 0.01);
     add("K15", "roundTripVolumeMm3", getCase("K15").expected.volumeMm3, k15.measuredRoundTripVolumeMm3, getCase("K15").expected.absoluteVolumeToleranceMm3);
+    checks.push({
+      caseId: "K15",
+      metric: "stepFileContainsGeometry",
+      expected: true,
+      measured: k15.stepFileContainsGeometry === true,
+      tolerance: 0,
+      pass: k15.stepFileContainsGeometry === true
+    });
   }
   const expectedIds = selectedCase ? [selectedCase] : fixtures.cases.filter((item) => item.id !== "K14" && !(skipCurvedCases && (item.id === "K02" || item.id === "K10"))).map((item) => item.id);
   const missingCases = expectedIds.filter((id) => !byId.has(id) || byId.get(id).status !== "completed");
