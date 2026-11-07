@@ -1,6 +1,6 @@
 import { createServer } from "vite";
 import { webkit, devices } from "playwright";
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
@@ -11,7 +11,34 @@ const publicDir = resolve(here, "public");
 mkdirSync(outputDir, { recursive: true });
 mkdirSync(publicDir, { recursive: true });
 copyFileSync(resolve(here, "node_modules/opengeometry/opengeometry_bg.wasm"), resolve(publicDir, "opengeometry_bg.wasm"));
+
 const pkg = JSON.parse(readFileSync(resolve(here, "node_modules/opengeometry/package.json"), "utf8"));
+function walkFiles(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = resolve(dir, entry.name);
+    return entry.isDirectory() ? walkFiles(path) : [path];
+  });
+}
+const declarationFiles = walkFiles(resolve(here, "node_modules/opengeometry")).filter((path) => path.endsWith(".d.ts"));
+const declarationPatterns = [
+  "booleanSubtraction", "booleanUnion", "executeBooleanSubtractionMany",
+  "class Cuboid", "class Solid", "class Opening", "OGAnalyticBrep",
+  "boolean_brep", "get_bounds", "get_brep_serialized", "exportBrepToStep"
+];
+const declarationEvidence = [];
+for (const path of declarationFiles) {
+  const lines = readFileSync(path, "utf8").split("\\n");
+  for (let index = 0; index < lines.length; index++) {
+    if (declarationPatterns.some((pattern) => lines[index].includes(pattern))) {
+      declarationEvidence.push({
+        file: path.slice(resolve(here, "node_modules/opengeometry").length + 1),
+        line: index + 1,
+        excerpt: lines.slice(Math.max(0, index - 2), Math.min(lines.length, index + 5)).join("\\n")
+      });
+    }
+  }
+}
+
 const server = await createServer({
   configFile: false,
   root: here,
@@ -66,6 +93,8 @@ const report = {
   generatedAt: new Date().toISOString(),
   candidate: "OpenGeometry 2.0 API line",
   candidateVersions: { opengeometry: pkg.version, three: JSON.parse(readFileSync(resolve(here, "node_modules/three/package.json"), "utf8")).version },
+  declarationFiles: declarationFiles.map((path) => path.slice(resolve(here, "node_modules/opengeometry").length + 1)),
+  declarationEvidence,
   license: pkg.license,
   runtime: { node: process.versions.node, platform: process.platform, architecture: process.arch },
   browser: "Playwright WebKit; desktop and iPad-like emulation, not physical Safari hardware",
