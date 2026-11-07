@@ -24,7 +24,7 @@ function walkModules(directory) {
         const metadata = JSON.parse(readFileSync(packageJsonPath, "utf8"));
         const licenseFiles = [];
         for (const name of readdirSync(entryPath)) {
-          if (/^(license|licence|copying|notice)(\\.|$)/i.test(name)) licenseFiles.push(name);
+          if (/^(license|licence|copying|notice)(\.|$)/i.test(name)) licenseFiles.push(name);
         }
         const identity = metadata.name + "@" + metadata.version + ":" + entryPath;
         if (!visited.has(identity)) {
