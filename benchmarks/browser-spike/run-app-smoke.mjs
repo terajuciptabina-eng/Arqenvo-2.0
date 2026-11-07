@@ -35,14 +35,32 @@ async function exerciseProfile(profile) {
     await page.mouse.move(bounds.x + bounds.width * 0.68, y, { steps: 8 });
     await page.mouse.up();
     await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("1 walls"));
+
+    // Add a perpendicular branch at the first wall's end to exercise live L-junction derivation.
+    await page.locator('[data-tool="wall"]').click();
+    await page.mouse.move(bounds.x + bounds.width * 0.68, y);
+    await page.mouse.down();
+    await page.mouse.move(bounds.x + bounds.width * 0.68, y + bounds.height * 0.22, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("2 walls"));
+
     await page.locator('[data-tool="door"]').click();
     await page.mouse.click(bounds.x + bounds.width * 0.5, y);
     await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("1 openings"));
+    await page.locator('[data-tool="window"]').click();
+    const windowX = bounds.x + bounds.width * 0.57;
+    if (profile.name === "webkit-ipad-like") await page.touchscreen.tap(windowX, y);
+    else await page.mouse.click(windowX, y);
+    await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("2 openings"));
 
+    await page.locator("#undo").click();
+    await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("1 openings"));
     await page.locator("#undo").click();
     await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("0 openings"));
     await page.locator("#redo").click();
     await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("1 openings"));
+    await page.locator("#redo").click();
+    await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("2 openings"));
 
     if (profile.name === "webkit-ipad-like") {
       const inspectorDisplay = await page.locator(".inspector").evaluate((node) => getComputedStyle(node).display);
@@ -50,7 +68,7 @@ async function exerciseProfile(profile) {
       if (!(await page.locator('[data-tool="window"]').isVisible())) throw new Error("Window tool is not visible on iPad-like viewport");
     }
     if (errors.length) throw new Error(errors.join("\n"));
-    results.push({ profile: profile.name, status: "pass", viewport: profile.options.viewport, walls: 1, openings: 1, undoRedo: "pass", browserErrors: errors });
+    results.push({ profile: profile.name, status: "pass", viewport: profile.options.viewport, walls: 2, openings: 2, junction: "L", doorWindow: "pass", undoRedo: "pass", browserErrors: errors });
   } catch (error) {
     failures.push({ profile: profile.name, error: error instanceof Error ? error.stack ?? error.message : String(error), browserErrors: errors });
   } finally {
