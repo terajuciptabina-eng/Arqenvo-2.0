@@ -67,6 +67,7 @@ jobs:
                 "- Versions: brepjs " + r.candidateVersions.brepjs + ", occt-wasm " + r.candidateVersions.occtWasm,
                 "- Initialization: " + r.initializationMilliseconds.toFixed(2) + " ms",
                 "- Peak RSS: " + r.peakRssBytesAfterRun + " bytes",
+                "- Analytic volume validation: " + r.validation.status,
                 "",
                 "| Case | Status | Operation (ms) |",
                 "|---|---:|---:|",
