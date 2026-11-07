@@ -111,11 +111,21 @@ The browser benchmark passes its primary status check only when the tessellated 
 - K15 exports/imports STEP and compares volume in the runner, but STEP content and topology evidence must be reviewed independently.
 - No physical iPad Safari test, full topology/validity inspection across the suite, production worker integration, controlled performance study or legal approval has been completed.
 
-## 8. Next verification gate
+## 8. Runner improvements committed for next run
 
-1. Refresh Run #37 until all jobs reach terminal states.
+Commit [`d274fd1`](https://github.com/terajuciptabina-eng/Arqenvo-2.0/commit/d274fd1b94bd3f6a844e678ad850b77f8cea8bf1) updates the BRepJS runner:
+
+- K12 now exports the initial and moved opening results to STEP, extracts normalized `CARTESIAN_POINT` coordinate sets, and requires the geometric signatures to differ while both volumes match the expected equal volumes. If the STEP coordinate extraction yields no points, the movement check fails closed.
+- K13 now samples process RSS at edit 1, every 10 edits and edit 100; checks 100 finite volume observations and exactly two alternating volumes; then exports/imports the final regenerated solid and compares its volume.
+- K15 STEP content detection now checks the ISO-10303-21 envelope and solid/surface geometry entities rather than assuming one specific `MANIFOLD_SOLID_BREP` token.
+
+K13 RSS sampling remains observational only: no forced garbage collection or controlled repeated-run memory slope is claimed. K12's STEP coordinate signature is a geometric point-set comparison, not a substitute for application-level host dependency tests.
+
+## 9. Next verification gate
+
+1. Inspect Run #37 rerun attempt 2 and the new full verification run triggered by commit `d274fd1`.
 2. Download and inspect every available BRepJS, curved, WebKit and OpenGeometry artifact.
-3. Verify K12 position/geometry differences, K13 repeat stability and memory methodology, and K15 STEP geometry and round-trip values.
+3. Verify the strengthened K12/K13 checks and K15 STEP geometry and round-trip values from actual job artifacts.
 4. Examine any failed case against the fixture and actual kernel output. Do not relax expected values to manufacture a pass.
 5. Update this report with terminal job conclusions and evidence links.
 6. Keep production kernel selection open pending full benchmark, device, performance, worker and licensing checks.

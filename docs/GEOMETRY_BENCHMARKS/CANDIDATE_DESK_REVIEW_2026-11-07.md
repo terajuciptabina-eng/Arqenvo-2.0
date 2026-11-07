@@ -84,7 +84,11 @@ Keep as a fallback pending exact package/OCCT version verification, browser buil
 | Production license/legal review | Not approved |
 | Replaceable adapter in application | Not implemented or approved |
 
-## 5. Current recommendation
+## 5. Runner verification improvements
+
+Commit `d274fd1b94bd3f6a844e678ad850b77f8cea8bf1` strengthens the evidence contract for K12 (actual STEP coordinate-set movement, not only equal volume) and K13 (100 finite volume observations, alternating dimensions, RSS samples and final STEP round-trip). These checks are committed but not yet validated by a completed workflow run. K13 memory samples are observational and do not establish leak freedom.
+
+## 6. Current recommendation
 
 Do not select or integrate a production geometry kernel yet.
 

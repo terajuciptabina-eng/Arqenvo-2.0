@@ -40,6 +40,10 @@
 | K14 | Browser/device compatibility | Desktop browser, iPad-like emulation and physical iPad Safari |
 | K15 | STEP round-trip | Export, reimport, geometry and volume comparison |
 
+## Latest runner improvements
+
+Commit [`d274fd1`](https://github.com/terajuciptabina-eng/Arqenvo-2.0/commit/d274fd1b94bd3f6a844e678ad850b77f8cea8bf1) strengthens BRepJS K12 and K13: K12 exports both opening states and compares normalized STEP Cartesian-point signatures in addition to volume; K13 records RSS samples through 100 edits, verifies two expected alternating volumes, and performs a final STEP import/volume check. These are stronger geometric and stability observations, not a controlled memory-leak proof.
+
 ## Evidence and interpretation rules
 
 - Distinguish exact B-Rep from tessellated mesh measurements.
