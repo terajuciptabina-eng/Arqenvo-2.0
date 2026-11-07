@@ -6,6 +6,10 @@
 
 - `../../benchmarks/kernel-spike/` — first Node-side brepjs + occt-wasm spike. Run instructions and limitations are documented in its README. It does not select a production kernel and does not replace iPad Safari testing.
 
+## First runtime benchmark
+
+- [First Runtime Benchmark Report — 2026-11-07](./FIRST_RUNTIME_BENCHMARK_REPORT_2026-11-07.md) — initial BRepJS/OCCT and Manifold Node/WASM results on Ubuntu and macOS. All current analytic volume fixtures matched after correcting benchmark placement and cutter bounds. This is not a final kernel selection or an iPad Safari result.
+
 ## Shared fixtures
 
 - `fixtures/wall-core-fixtures.json` — canonical, kernel-neutral analytic inputs for K01, K03, K06 and K07. All candidate spikes must consume these same fixtures and record the configured tolerance; do not modify fixtures per candidate.
