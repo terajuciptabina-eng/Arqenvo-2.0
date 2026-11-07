@@ -24,7 +24,7 @@ The current solver is therefore an independent deterministic first-pass geometry
 
 ## Known limitations and next gates
 
-1. The current junction solver handles pairwise straight-segment intersections and applies the resulting cap to per-skin footprints. Multi-wall cluster resolution, overlap/coincident baselines, acute-angle limits, wall priorities and complete polygon topology validation remain unimplemented.
+1. The current junction solver handles pairwise straight-segment intersections and applies the resulting cap to per-skin footprints. Multi-wall clusters are detected and deliberately withheld for priority resolution; acute/near-collinear miters are rejected by a configurable miter-ratio limit. Overlap/coincident baselines, wall priorities and complete polygon topology validation remain unimplemented.
 2. Composite skin offsets are generated from ordered thicknesses. Profile-based composites, variable skins, finish priority, cut surfaces and material/building-material semantics need more reference evidence.
 3. Opening geometry currently models rectangular through-cuts. Library-part profiles, jamb/reveal/sill geometry, curved-host cut limits and partial-depth cuts remain open.
 4. The adapter contract is defined but no kernel adapter is connected to the application. The BRepJS/OCCT prototype remains isolated in benchmarks.

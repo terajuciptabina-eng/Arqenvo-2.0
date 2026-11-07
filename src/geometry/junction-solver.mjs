@@ -29,7 +29,7 @@ function offsetLine(wall, endpoint, side) {
   return { point: add(joint, scale(normal, side * wall.thickness / 2)), direction: ray };
 }
 
-function lMiter(wallA, endA, wallB, endB, point, epsilon) {
+function lMiter(wallA, endA, wallB, endB, point, epsilon, maxMiterRatio) {
   const rayA = rayFromEndpoint(wallA, endA);
   const rayB = rayFromEndpoint(wallB, endB);
   const turn = cross(rayA, rayB);
@@ -42,6 +42,8 @@ function lMiter(wallA, endA, wallB, endB, point, epsilon) {
   const outer = lineIntersection(aOuter.point, aOuter.direction, bOuter.point, bOuter.direction, epsilon);
   const inner = lineIntersection(aInner.point, aInner.direction, bInner.point, bInner.direction, epsilon);
   if (!outer || !inner || !outer.every(Number.isFinite) || !inner.every(Number.isFinite)) return null;
+  const maxMiterDistance = Math.max(wallA.thickness, wallB.thickness) * maxMiterRatio;
+  if (distance(outer, point) > maxMiterDistance || distance(inner, point) > maxMiterDistance) return { reason: "MITER_LIMIT_EXCEEDED" };
   return { point, outer, inner };
 }
 
@@ -63,6 +65,7 @@ export function solveWallJunctions(walls, options = {}) {
   const tolerance = options.tolerance ?? 1e-6;
   const angularToleranceDegrees = options.angularToleranceDegrees ?? 1;
   const epsilon = options.epsilon ?? 1e-10;
+  const maxMiterRatio = options.maxMiterRatio ?? 10;
   const junctions = [];
   const diagnostics = [];
   for (let i = 0; i < walls.length; i += 1) {
@@ -82,7 +85,13 @@ export function solveWallJunctions(walls, options = {}) {
         if (Math.abs(angle - 90) > angularToleranceDegrees) type = "ANGLED";
       }
       let geometry = null;
-      if (type === "L" || type === "ANGLED") geometry = lMiter(a, endA, b, endB, hit.point, epsilon);
+      if (type === "L" || type === "ANGLED") {
+        geometry = lMiter(a, endA, b, endB, hit.point, epsilon, maxMiterRatio);
+        if (geometry?.reason) {
+          diagnostics.push({ code: geometry.reason, wallIds: [a.id, b.id], point: hit.point });
+          geometry = null;
+        }
+      }
       if (type === "T") {
         const branch = endA ? a : b;
         const host = endA ? b : a;
@@ -103,5 +112,33 @@ export function solveWallJunctions(walls, options = {}) {
       if (!geometry && type !== "CROSS") diagnostics.push({ code: "JUNCTION_GEOMETRY_UNRESOLVED", junctionId: junction.id });
     }
   }
-  return { junctions, diagnostics, tolerance };
+  const clusters = [];
+  for (const junction of junctions) {
+    let cluster = clusters.find((item) => distance(item.point, junction.point) <= tolerance);
+    if (!cluster) {
+      cluster = { point: junction.point, items: [] };
+      clusters.push(cluster);
+    }
+    cluster.items.push(junction);
+  }
+  const resolvedJunctions = [];
+  for (const cluster of clusters) {
+    const wallIds = [...new Set(cluster.items.flatMap((item) => item.wallIds))].sort();
+    if (wallIds.length > 2) {
+      const id = `junction:cluster:${wallIds.join(":")}`;
+      resolvedJunctions.push({
+        id,
+        type: "MULTI_WALL",
+        wallIds,
+        point: cluster.point,
+        geometry: null,
+        operation: "manual-review",
+        pairCount: cluster.items.length
+      });
+      diagnostics.push({ code: "MULTI_WALL_CLUSTER_REQUIRES_PRIORITY_RESOLUTION", junctionId: id, wallIds });
+    } else {
+      resolvedJunctions.push(...cluster.items);
+    }
+  }
+  return { junctions: resolvedJunctions, diagnostics, tolerance, maxMiterRatio };
 }
