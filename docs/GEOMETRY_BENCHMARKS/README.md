@@ -2,97 +2,58 @@
 
 **Decision status: OPEN — no production kernel selected.**
 
-## Isolated prototype
+## Isolated prototypes
 
-- `../../benchmarks/kernel-spike/` — first Node-side brepjs + occt-wasm spike. Run instructions and limitations are documented in its README. It does not select a production kernel and does not replace iPad Safari testing.
+- `../../benchmarks/kernel-spike/` — BRepJS + OCCT-WASM exact B-Rep spike. Evaluation-only; not application source.
+- `../../benchmarks/manifold-spike/` — Manifold mesh-kernel control. Evaluation-only; not an exact B-Rep candidate.
+- `../../benchmarks/opengeometry-2-spike/` — OpenGeometry 2.0.18 browser probe. Evaluation-only; not an application dependency.
 
-## First runtime benchmark
+## Current runtime evidence
 
-- [First Runtime Benchmark Report — 2026-11-07](./FIRST_RUNTIME_BENCHMARK_REPORT_2026-11-07.md) — initial BRepJS/OCCT and Manifold Node/WASM results on Ubuntu and macOS. All current analytic volume fixtures matched after correcting benchmark placement and cutter bounds. The report now includes an automated Playwright WebKit desktop and iPad-like smoke pass; it is still not a physical iPad Safari result or a final kernel selection.
+- [First Runtime Benchmark Report — 2026-11-07](./FIRST_RUNTIME_BENCHMARK_REPORT_2026-11-07.md) records the initial baseline and the later Run #37 evidence.
+- [Candidate Desk Review — 2026-11-07](./CANDIDATE_DESK_REVIEW_2026-11-07.md) records source-backed candidate findings and the prototype order, not a production decision.
+- [Run #37](https://github.com/terajuciptabina-eng/Arqenvo-2.0/actions/runs/42359457979) is the current verification run for commit `ddb407f352331b3ab9f3ac1c804b2c92f188c446`. At the latest check, Manifold Ubuntu completed successfully; BRepJS Ubuntu was still running and the remaining jobs were queued. Do not treat queued or running jobs as results.
 
 ## Shared fixtures
 
-- `fixtures/wall-core-fixtures.json` — canonical, kernel-neutral analytic inputs for K01–K13 (excluding K14) and K15. K14 is the browser/device compatibility test. Each candidate must consume the same semantic fixtures; unsupported capabilities must be recorded as unsupported rather than silently approximated. All candidate spikes must consume these same fixtures and record the configured tolerance; do not modify fixtures per candidate.
-
-## Current candidate review
-
-See [Candidate Desk Review — 2026-11-07](./CANDIDATE_DESK_REVIEW_2026-11-07.md) for the source-backed preliminary comparison of OpenGeometry 3.x, brepjs + occt-wasm, Manifold 3.x and direct opencascade.js.
-
-The review is desk research only. No runtime benchmark, iPad Safari test or final license approval has been completed. Do not treat the preliminary prototype order as a kernel selection.
-
-## Candidates
-
-Evaluate:
-- Open CASCADE Technology / OpenCascade.js.
-- OpenGeometry.
-- Manifold.
-- brepjs.
-
-Candidate availability, maturity, API, build instructions, browser support and license terms must be rechecked against official project sources at evaluation time.
-
-## Evaluation principles
-
-- Run identical test inputs and expected outputs.
-- Record exact package version, build options and browser/device.
-- Separate kernel capability from ARQENVO BIM logic.
-- Record failures, invalid topology and numeric drift.
-- Include license and commercial-distribution review.
-- Do not infer Archicad-equivalent wall joins from generic Boolean support.
+- `fixtures/wall-core-fixtures.json` is the canonical kernel-neutral input set for K01–K13 and K15. K14 is a browser/device compatibility test.
+- Every candidate must consume the same semantic inputs. Unsupported capabilities must be marked unsupported or blocked; never silently approximate.
+- The fixture tolerance policy is `not-yet-approved`. Candidate reports must record the actual configured tolerance and measurement method. Fixture tolerances are test-specific, not a blanket modelling tolerance.
 
 ## Required benchmark cases
 
 | ID | Scenario | What it tests |
 |---|---|---|
-| K01 | Straight wall prism | Baseline dimensions, solid and volume |
-| K02 | Quarter-annular curved wall | Exact curved profile/revolve |
+| K01 | Straight wall prism | Dimensions, closed solid and volume |
+| K02 | Quarter-annular curved wall | Curved profile and revolve |
 | K03 | L-junction | Union after fixed wall-end solution |
 | K04 | T-junction | Multi-element Boolean union |
 | K05 | Cross-junction | Four-way orthogonal wall union |
-| K06 | Three-skin composite wall | Separate skin volumes and ordering |
-| K07 | Door through all skins | Hosted door cut through composite |
+| K06 | Three-skin composite wall | Separate skin volumes, ordering and identity |
+| K07 | Door through all skins | Opening cut through composite skins |
 | K08 | Window through all skins | Raised opening and sill retention |
 | K09 | Multiple doors | Multi-tool cut on one host |
-| K10 | Curved-wall opening | Angular opening in curved wall |
+| K10 | Curved-wall opening | Angular opening in curved host |
 | K11 | Wall thickness edit | Regeneration from changed parameters |
-| K12 | Opening moved on host | Rebuild after host/opening dependency change |
-| K13 | 100 repeated regenerations | Repeated edit stability and memory observation |
-| K14 | Browser/device compatibility | Desktop WebKit and iPad-like emulation; physical iPad Safari still required |
-| K15 | STEP round-trip | Export, import and volume comparison |
+| K12 | Opening moved on host | Actual opening placement and geometry change |
+| K13 | 100 repeated regenerations | Determinism, validity and memory observation |
+| K14 | Browser/device compatibility | Desktop browser, iPad-like emulation and physical iPad Safari |
+| K15 | STEP round-trip | Export, reimport, geometry and volume comparison |
 
-## Measurements
+## Evidence and interpretation rules
 
-Record:
-- Geometric deviation against reference geometry.
-- Topology validity.
-- Boolean success/failure rate.
-- Runtime per operation.
-- Peak memory where measurable.
-- Initial WASM and asset download size.
-- Worker compatibility and responsiveness.
-- Safari/iPad/iPhone behaviour.
-- API ergonomics and maintenance activity.
-- License obligations and redistribution implications.
-
-## Benchmark report format
-
-For each candidate, include:
-1. Version and source URL.
-2. License and obligations reviewed.
-3. Build/runtime configuration.
-4. Test environment.
-5. Results for G01–G15.
-6. Failed cases with reproducible inputs.
-7. Performance measurements.
-8. Known limitations.
-9. Adapter complexity.
-10. Recommendation and confidence.
+- Distinguish exact B-Rep from tessellated mesh measurements.
+- Distinguish kernel geometry from ARQENVO BIM junction/host dependency logic.
+- Volume equality alone does not prove opening position, profile, topology or semantic identity.
+- K12 requires a geometric comparison that proves the opening moved, not merely equal wall volumes.
+- K13 requires repeated-run memory/validity evidence; a single before/after RSS reading is not a definitive leak test.
+- K15 requires STEP content checks and imported-solid volume comparison.
+- Desktop/iPad-like Playwright WebKit is not physical iPad Safari.
+- Record exact package versions, OS/architecture, runtime/browser version, initialization and operation timing, memory method, topology/validity, failures, asset size and license notes.
+- Do not compare raw timing as a kernel ranking when representation and validation depth differ.
 
 ## Selection gate
 
-No production kernel is selected until:
-- All critical architectural tests have been run or explicitly marked blocked.
-- Failures and workarounds are documented.
-- Browser support is validated on desktop and iPad Safari.
-- License review is complete.
-- A prototype demonstrates that kernel types can remain behind the adapter.
-- The decision is recorded in an Architecture Decision Record.
+No production kernel is selected until the full applicable K01–K15 matrix, B-Rep/topology checks, wall junction and hosted-opening behaviour, repeat-edit stability, STEP exchange, desktop and physical iPad Safari, worker behavior, performance, and commercial license review have sufficient reproducible evidence.
+
+Keep the kernel adapter replaceable. Do not integrate a candidate into production or modify the application's modeling architecture based only on the current prototype results.
