@@ -1,8 +1,8 @@
 # First Runtime Benchmark Report — 2026-11-07
 
 **Status:** Initial Node/WASM baseline completed. No production kernel selected.  
-**Source commit tested:** `b6b2009852c67f8ce14e8f36597a93d2b00ec461` for the BRepJS and Manifold runner validation pass.  
-**Workflow:** [Geometry Kernel Benchmark run #6](https://github.com/terajuciptabina-eng/Arqenvo-2.0/actions/runs/42356612747)
+**Runner commits:** BRepJS validation `b6b2009852c67f8ce14e8f36597a93d2b00ec461`; Manifold validation `b58aa3ff711e417af7b108e91011973210186b0c`.  
+**Final verification:** [Geometry Kernel Benchmark run #8](https://github.com/terajuciptabina-eng/Arqenvo-2.0/actions/runs/42356622815) — all four Ubuntu/macOS jobs succeeded with `validation.status = exact-match`.
 
 ## 1. Candidates and environment
 
