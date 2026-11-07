@@ -18,7 +18,7 @@ ARQENVO 2.0 is a greenfield development. Its initial product objective is to rep
 ## Current status
 
 **Stage:** M2 — greenfield BIM domain and wall-geometry vertical slice  
-**Production application:** Core semantic model, wall derivation, junction planning, composite skins, hosted-opening plans, dependency invalidation and a first 2D browser modelling workspace implemented; 3D viewport and persistence remain open  
+**Production application:** Core semantic model, wall derivation, L/T junction plans, composite skins, hosted door/window editing, dependency invalidation, first 2D browser workspace and IndexedDB save/restore implemented; 3D viewport, full junction priorities and project exchange remain open  
 **Platform:** Browser target; core modules are dependency-free ECMAScript modules  
 **Geometry strategy:** Run #63 passed 11/11 hosted benchmark jobs; BRepJS + OCCT-WASM remains a prototype candidate behind an adapter, not a production selection  
 **Reference:** Graphisoft Archicad 29 on macOS; independent implementation only  

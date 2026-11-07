@@ -91,3 +91,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .property-form input:focus, .property-form select:focus { border-color: #4dd4bd; }
 .save-button { border: 1px solid #286a6b; border-radius: 7px; background: #183b43; color: #5be0c8; padding: 9px 10px; font-size: 9px; margin-top: 3px; }
 .save-button:hover { background: #20535a; }
+
+.save-top-button { border: 1px solid #286a6b; background: #183b43; color: #5be0c8; border-radius: 7px; padding: 7px 11px; font-size: 9px; }
+.save-top-button:hover { background: #20535a; }

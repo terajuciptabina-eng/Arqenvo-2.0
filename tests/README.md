@@ -15,6 +15,8 @@ Current automated coverage:
 - Kernel-neutral wall and opening derivation plans.
 - Deterministic L/T/cross junction classification and trim-plan generation.
 - Atomic project transactions and undo/redo.
+- Transitive invalidation of hosted openings, host wall representations and junction peers.
+- Project repository save/load/list/delete using an isolated memory adapter; browser IndexedDB persistence is covered by WebKit smoke tests.
 
 Next required layers:
 - Kernel contract tests shared by every adapter.

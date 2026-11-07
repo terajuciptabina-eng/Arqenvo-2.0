@@ -23,6 +23,7 @@ async function exerciseProfile(profile) {
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   try {
     await page.goto("http://127.0.0.1:4174/", { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForFunction(() => window.__arqenvoReady === true, undefined, { timeout: 15000 });
     const canvas = page.locator("#plan-canvas");
     await canvas.waitFor({ state: "visible" });
     const bounds = await canvas.boundingBox();
@@ -81,6 +82,11 @@ async function exerciseProfile(profile) {
       if (await page.locator('input[name="width"]').inputValue() !== "900") throw new Error("Opening edit undo did not restore width");
       await page.locator("#redo").click();
     }
+
+    await page.locator("#save-project").click();
+    await page.waitForFunction(() => document.querySelector("#canvas-status")?.textContent?.startsWith("Saved locally"));
+    await page.reload();
+    await page.waitForFunction(() => window.__arqenvoReady === true && document.querySelector("#element-count")?.textContent?.includes("2 walls") && document.querySelector("#element-count")?.textContent?.includes("2 openings"), undefined, { timeout: 15000 });
 
     if (profile.name === "webkit-ipad-like") {
       const inspectorDisplay = await page.locator(".inspector").evaluate((node) => getComputedStyle(node).display);

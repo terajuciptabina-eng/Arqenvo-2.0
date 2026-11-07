@@ -1,6 +1,7 @@
 import { createOpening, createProject, createWall } from "../bim/model.mjs";
 import { deriveProjectPlan } from "../geometry/wall-derivation.mjs";
 import { ProjectStore } from "../project/project-store.mjs";
+import { createIndexedDbProjectRepository, createMemoryProjectRepository } from "../storage/project-repository.mjs";
 
 const canvas = document.querySelector("#plan-canvas");
 const context = canvas.getContext("2d");
@@ -10,7 +11,20 @@ const inspector = document.querySelector("#inspector-content");
 const emptyState = document.querySelector("#empty-state");
 const elementCount = document.querySelector("#element-count");
 const scaleReadout = document.querySelector("#scale-readout");
-const store = new ProjectStore(createProject({ id: "arqenvo-local-project" }));
+const projectId = "arqenvo-local-project";
+let repository;
+let restoredProject = null;
+let persistenceMode = "indexeddb";
+try {
+  repository = createIndexedDbProjectRepository();
+  restoredProject = await repository.load(projectId);
+} catch (error) {
+  repository = createMemoryProjectRepository();
+  persistenceMode = "memory";
+  console.warn("IndexedDB persistence unavailable; using session-only memory storage", error);
+}
+const store = new ProjectStore(restoredProject ?? createProject({ id: projectId }));
+let saveQueue = Promise.resolve();
 
 let activeTool = "select";
 let selected = null;
@@ -22,13 +36,24 @@ let camera = { x: 0, y: 0, scale: 0.16 };
 let width = 0;
 let height = 0;
 let dpr = 1;
-let nextWallNumber = 1;
-let nextOpeningNumber = 1;
+const restoredSnapshot = store.snapshot;
+let nextWallNumber = Math.max(0, ...Object.keys(restoredSnapshot.walls).map((id) => Number(id.match(/^wall-(\d+)$/)?.[1] ?? 0))) + 1;
+let nextOpeningNumber = Math.max(0, ...Object.keys(restoredSnapshot.openings).map((id) => Number(id.match(/^(?:door|window)-(\d+)$/)?.[1] ?? 0))) + 1;
 
 const setStatus = (message) => {
   statusText.textContent = message;
   canvasStatus.textContent = message;
 };
+function persistProject() {
+  const projectSnapshot = store.snapshot;
+  saveQueue = saveQueue.then(async () => {
+    const result = await repository.save(projectSnapshot);
+    setStatus(persistenceMode === "indexeddb" ? `Saved locally · ${result.savedAt}` : "Saved for this browser session only");
+  }).catch((error) => {
+    setStatus(`Save failed · ${error instanceof Error ? error.message : String(error)}`);
+  });
+  return saveQueue;
+}
 const snapshot = () => store.snapshot;
 const snap = (value, step = 50) => Math.round(value / step) * step;
 const toScreen = ([x, y]) => [width / 2 + (x - camera.x) * camera.scale, height / 2 - (y - camera.y) * camera.scale];
@@ -174,6 +199,7 @@ function bindInspectorForm(type, id) {
         });
         invalidated = transaction.invalidatedElementIds;
       }
+      void persistProject();
       setStatus(`Updated ${type} · ${Math.max(0, invalidated.length - 1)} dependent element(s) invalidated`);
       render();
     } catch (error) {
@@ -272,6 +298,7 @@ function createHostedOpening(type, point) {
   try {
     const opening = createOpening({ id, type, hostWallId: hit.wall.id, positionAlongBaseline: snap(hit.along, 10), anchor: "center", width, height, sillElevation });
     store.transact(`Add ${type}`, (draft) => { draft.openings[id] = opening; });
+    void persistProject();
     selected = { type: "opening", id };
     setStatus(`${type === "door" ? "Door" : "Window"} hosted on ${hit.wall.id}`);
   } catch (error) {
@@ -356,6 +383,7 @@ function pointerUp() {
   try {
     const wall = createWall({ id, baseline: [start, end], referenceLine: "center", thickness: 200, baseElevation: 0, height: 3000 });
     store.transact("Add wall", (draft) => { draft.walls[id] = wall; });
+    void persistProject();
     selected = { type: "wall", id };
     setStatus(`Created ${id} · ${Math.round(length)} mm`);
   } catch (error) {
@@ -378,8 +406,8 @@ function zoomAt(event) {
 
 document.querySelectorAll("[data-tool]").forEach((button) => button.addEventListener("click", () => setTool(button.dataset.tool)));
 document.querySelector("#start-wall").addEventListener("click", () => setTool("wall"));
-document.querySelector("#undo").addEventListener("click", () => { if (store.undo()) { selected = null; setStatus("Undo completed"); render(); } });
-document.querySelector("#redo").addEventListener("click", () => { if (store.redo()) { selected = null; setStatus("Redo completed"); render(); } });
+document.querySelector("#undo").addEventListener("click", () => { if (store.undo()) { selected = null; void persistProject(); setStatus("Undo completed"); render(); } });
+document.querySelector("#redo").addEventListener("click", () => { if (store.redo()) { selected = null; void persistProject(); setStatus("Redo completed"); render(); } });
 document.querySelector("#reset-view").addEventListener("click", () => { camera = { x: 0, y: 0, scale: 0.16 }; render(); setStatus("View reset"); });
 canvas.addEventListener("pointerdown", pointerDown);
 canvas.addEventListener("pointermove", pointerMove);
@@ -387,10 +415,11 @@ canvas.addEventListener("pointerup", pointerUp);
 canvas.addEventListener("pointercancel", pointerUp);
 canvas.addEventListener("wheel", zoomAt, { passive: false });
 canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+document.querySelector("#save-project").addEventListener("click", () => { void persistProject(); });
 window.addEventListener("keydown", (event) => {
   if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") { event.preventDefault(); if (store.undo()) { selected = null; render(); setStatus("Undo completed"); } }
-  else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "y") { event.preventDefault(); if (store.redo()) { selected = null; render(); setStatus("Redo completed"); } }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") { event.preventDefault(); if (store.undo()) { selected = null; void persistProject(); render(); setStatus("Undo completed"); } }
+  else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "y") { event.preventDefault(); if (store.redo()) { selected = null; void persistProject(); render(); setStatus("Redo completed"); } }
   else if (event.key === "Escape") { draftStart = null; draftPoint = null; setTool("select"); }
   else if (event.key === "1") setTool("select");
   else if (event.key === "2") setTool("wall");
@@ -400,3 +429,5 @@ window.addEventListener("keydown", (event) => {
 new ResizeObserver(resize).observe(canvas);
 resize();
 setTool("select");
+if (restoredProject) setStatus("Restored saved project from this browser");
+window.__arqenvoReady = true;
