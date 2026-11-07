@@ -1,0 +1,93 @@
+name: Geometry Kernel Benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "benchmarks/kernel-spike/**"
+      - "docs/GEOMETRY_BENCHMARKS/**"
+      - ".github/workflows/geometry-kernel-benchmark.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: geometry-kernel-benchmark-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  brepjs-spike:
+    name: brepjs + occt-wasm / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        working-directory: benchmarks/kernel-spike
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: benchmarks/kernel-spike/package.json
+
+      - name: Install pinned direct dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run isolated geometry benchmark
+        id: benchmark
+        run: npm run bench
+
+      - name: Publish benchmark summary
+        if: always()
+        working-directory: .
+        shell: bash
+        run: |
+          REPORT="benchmarks/kernel-spike/benchmark-output/benchmark-results-brepjs.json"
+          if [ -f "$REPORT" ]; then
+            node -e '
+              const fs = require("node:fs");
+              const r = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              const lines = [
+                "## brepjs + occt-wasm benchmark",
+                "",
+                "- Runtime: " + r.runtime.node + " / " + r.runtime.platform + " / " + r.runtime.architecture,
+                "- Versions: brepjs " + r.candidateVersions.brepjs + ", occt-wasm " + r.candidateVersions.occtWasm,
+                "- Initialization: " + r.initializationMilliseconds.toFixed(2) + " ms",
+                "- Peak RSS: " + r.peakRssBytesAfterRun + " bytes",
+                "",
+                "| Case | Status | Operation (ms) |",
+                "|---|---:|---:|",
+                ...r.cases.map(c => "| " + c.id + " | " + c.status + " | " + c.operationMilliseconds.toFixed(2) + " |"),
+                "",
+                "Failures: " + r.failures.length,
+                "",
+                "This is a Node/WASM spike, not a production-kernel decision or an iPad Safari result."
+              ];
+              fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+            ' "$REPORT"
+          else
+            echo "## Benchmark report unavailable" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload reproducible benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brepjs-kernel-spike-${{ matrix.os }}
+          path: |
+            benchmarks/kernel-spike/benchmark-output/
+            benchmarks/kernel-spike/package-lock.json
+          if-no-files-found: warn
+          retention-days: 30
