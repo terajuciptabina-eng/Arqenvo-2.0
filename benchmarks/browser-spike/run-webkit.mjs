@@ -12,7 +12,7 @@ const server = await createServer({
   configFile: false,
   root: here,
   logLevel: "error",
-  server: { host: "127.0.0.1", port: 4173, strictPort: true }
+  server: { host: "127.0.0.1", port: 4173, strictPort: true, hmr: false }
 });
 let browser;
 const results = [];
@@ -33,8 +33,8 @@ try {
     const browserErrors = [];
     page.on("pageerror", (error) => browserErrors.push(error.message));
     const started = performance.now();
-    await page.goto("http://127.0.0.1:4173/", { waitUntil: "networkidle", timeout: 60000 });
-    await page.waitForFunction(() => window.__geometryBenchmark?.status, undefined, { timeout: 60000 });
+    await page.goto("http://127.0.0.1:4173/", { waitUntil: "load", timeout: 30000 });
+    await page.waitForFunction(() => window.__geometryBenchmark?.status, undefined, { timeout: 30000 });
     const result = await page.evaluate(() => window.__geometryBenchmark);
     const elapsedMilliseconds = performance.now() - started;
     const record = {
