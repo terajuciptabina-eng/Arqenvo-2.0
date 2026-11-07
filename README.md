@@ -18,7 +18,7 @@ ARQENVO 2.0 is a greenfield development. Its initial product objective is to rep
 ## Current status
 
 **Stage:** M1 — targeted Archicad 29 wall evidence review and geometry-kernel desk evaluation  
-**Implementation:** Not started; no executable application or geometry engine exists yet  
+**Production application:** Not started; isolated brepjs kernel spike prepared but not yet executed  
 **Platform:** Browser  
 **Geometry strategy:** Candidate review completed; runtime benchmarks and kernel selection remain open  
 **Reference:** Graphisoft Archicad 29 on macOS  
