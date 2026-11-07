@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "project": "ARQENVO 2.0",
+  "purpose": "Shared analytic fixtures for isolated browser geometry-kernel spikes. These are kernel-neutral inputs, not Archicad's proprietary internal data format.",
+  "units": {
+    "length": "mm",
+    "angle": "degree",
+    "coordinateSystem": "right-handed",
+    "upAxis": "Z"
+  },
+  "tolerancePolicy": {
+    "status": "not-yet-approved",
+    "rule": "Each candidate run must record its configured modelling tolerance and measured dimensional deviation. Do not silently substitute candidate defaults or compare results without recording them."
+  },
+  "cases": [
+    {
+      "id": "K01",
+      "name": "straight-wall-prism",
+      "purpose": "Baseline profile extrusion and solid validity",
+      "wall": {
+        "id": "wall-k01",
+        "baseline": [[0, 0], [1000, 0]],
+        "referenceLine": "center",
+        "thickness": 200,
+        "baseElevation": 0,
+        "height": 3000
+      },
+      "expected": {
+        "closedSolid": true,
+        "boundingDimensions": [1000, 200, 3000],
+        "volumeMm3": 600000000
+      }
+    },
+    {
+      "id": "K03",
+      "name": "two-wall-l-junction",
+      "purpose": "Kernel-neutral solid construction and union after an independently supplied wall-end solution",
+      "walls": [
+        {
+          "id": "wall-k03-a",
+          "baseline": [[0, 0], [3000, 0]],
+          "referenceLine": "center",
+          "thickness": 200,
+          "baseElevation": 0,
+          "height": 3000
+        },
+        {
+          "id": "wall-k03-b",
+          "baseline": [[3000, 0], [3000, 2000]],
+          "referenceLine": "center",
+          "thickness": 200,
+          "baseElevation": 0,
+          "height": 3000
+        }
+      ],
+      "junctionInput": {
+        "type": "L",
+        "angle": 90,
+        "policy": "Use the same precomputed wall-end boundaries for every candidate. Do not ask the kernel to invent BIM junction priority or trim rules."
+      },
+      "expected": {
+        "closedSolidOrValidSolidSet": true,
+        "noUnintendedGapAtJunction": true,
+        "noDuplicateInternalFacesInMergedResult": true
+      }
+    },
+    {
+      "id": "K06",
+      "name": "three-skin-composite-wall",
+      "purpose": "Independent skin solids, ordering and material identity",
+      "wall": {
+        "id": "wall-k06",
+        "baseline": [[0, 0], [1000, 0]],
+        "referenceLine": "center",
+        "thickness": 200,
+        "baseElevation": 0,
+        "height": 3000
+      },
+      "skins": [
+        {
+          "id": "skin-external",
+          "order": 0,
+          "thickness": 20,
+          "materialId": "material-external"
+        },
+        {
+          "id": "skin-core",
+          "order": 1,
+          "thickness": 160,
+          "materialId": "material-core"
+        },
+        {
+          "id": "skin-internal",
+          "order": 2,
+          "thickness": 20,
+          "materialId": "material-internal"
+        }
+      ],
+      "expected": {
+        "skinCount": 3,
+        "skinThicknesses": [20, 160, 20],
+        "skinVolumesMm3": [60000000, 480000000, 60000000],
+        "totalVolumeMm3": 600000000,
+        "skinOrderPreserved": true,
+        "materialIdentityPreserved": true
+      }
+    },
+    {
+      "id": "K07",
+      "name": "centered-door-through-three-skins",
+      "purpose": "Boolean cut through all composite skins and analytic volume check",
+      "wall": {
+        "id": "wall-k07",
+        "baseline": [[0, 0], [1000, 0]],
+        "referenceLine": "center",
+        "thickness": 200,
+        "baseElevation": 0,
+        "height": 3000
+      },
+      "skins": [
+        {
+          "id": "skin-external",
+          "order": 0,
+          "thickness": 20,
+          "materialId": "material-external"
+        },
+        {
+          "id": "skin-core",
+          "order": 1,
+          "thickness": 160,
+          "materialId": "material-core"
+        },
+        {
+          "id": "skin-internal",
+          "order": 2,
+          "thickness": 20,
+          "materialId": "material-internal"
+        }
+      ],
+      "opening": {
+        "id": "door-k07",
+        "hostWallId": "wall-k07",
+        "hostPositionAlongBaseline": 500,
+        "width": 900,
+        "height": 2100,
+        "sillElevation": 0,
+        "cutDepth": "through-all-skins",
+        "cutToolMustExtendBeyondHostFaces": true
+      },
+      "expected": {
+        "openingWidth": 900,
+        "openingHeight": 2100,
+        "cutThroughAllSkins": true,
+        "remainingSkinVolumesMm3": [22200000, 177600000, 22200000],
+        "remainingTotalVolumeMm3": 222000000,
+        "validClosedResult": true
+      }
+    }
+  ],
+  "runRecordRequired": [
+    "candidateName",
+    "candidatePackageVersions",
+    "browserVersion",
+    "operatingSystem",
+    "deviceModel",
+    "wasmAssetBytes",
+    "initializationMilliseconds",
+    "operationMilliseconds",
+    "configuredTolerance",
+    "measuredBoundingDimensions",
+    "measuredVolume",
+    "topologyValidity",
+    "failureOrWarningDetails"
+  ]
+}
