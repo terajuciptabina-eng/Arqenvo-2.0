@@ -563,9 +563,10 @@
         "height": 2100
       },
       "expected": {
-        "remainingVolumeMm3": 733038285.8376184,
+        "remainingVolumeMm3": 795870138.9094143,
         "absoluteVolumeToleranceMm3": 0.5,
-        "openingSweepAngleRadians": 0.3490658503988659
+        "openingSweepAngleRadians": 0.3490658503988659,
+        "validationBasis": "host annular-sector volume minus the intersecting annular opening sector, using wall radial bounds, opening sweep angle, and opening height"
       }
     },
     {
