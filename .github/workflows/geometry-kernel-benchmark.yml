@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: geometry-kernel-benchmark-main-v4
+  group: geometry-kernel-benchmark-main-v5
   cancel-in-progress: false
 
 jobs:
