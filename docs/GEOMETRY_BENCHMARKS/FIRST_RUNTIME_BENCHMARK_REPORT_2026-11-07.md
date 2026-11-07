@@ -121,7 +121,11 @@ Commit [`d274fd1`](https://github.com/terajuciptabina-eng/Arqenvo-2.0/commit/d27
 
 K13 RSS sampling remains observational only: no forced garbage collection or controlled repeated-run memory slope is claimed. K12's STEP coordinate signature is a geometric point-set comparison, not a substitute for application-level host dependency tests.
 
-## 9. Next verification gate
+## 9. License evidence collection
+
+The workflow now includes a package-license inventory job for the pinned BRepJS/OCCT-WASM, Manifold and OpenGeometry dependency trees. It records package name/version, declared license metadata, repository metadata and top-level LICENSE/COPYING/NOTICE files. This is an inventory for legal review, not a legal opinion or approval; transitive license obligations, binary redistribution terms and hosted-service implications still require review.
+
+## 10. Next verification gate
 
 1. Inspect Run #37 rerun attempt 2 and the new full verification run triggered by commit `d274fd1`.
 2. Download and inspect every available BRepJS, curved, WebKit and OpenGeometry artifact.

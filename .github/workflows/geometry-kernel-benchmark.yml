@@ -221,6 +221,42 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  license-inventory:
+    name: package license inventory / ${{ matrix.candidate }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - candidate: brepjs-occt
+            directory: benchmarks/kernel-spike
+          - candidate: manifold
+            directory: benchmarks/manifold-spike
+          - candidate: opengeometry-2
+            directory: benchmarks/opengeometry-2-spike
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install pinned candidate dependencies
+        working-directory: ${{ matrix.directory }}
+        run: npm install --no-audit --no-fund
+      - name: Inventory installed package licenses
+        working-directory: ${{ matrix.directory }}
+        run: node ../license-audit.mjs
+      - name: Upload license inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-inventory-${{ matrix.candidate }}
+          path: ${{ matrix.directory }}/benchmark-output/license-inventory.json
+          if-no-files-found: warn
+          retention-days: 30
+
   opengeometry-2-browser-spike:
     name: OpenGeometry 2.0.18 browser compatibility probe
     runs-on: macos-latest

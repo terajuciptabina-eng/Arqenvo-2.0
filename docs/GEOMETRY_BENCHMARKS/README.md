@@ -56,6 +56,10 @@ Commit [`d274fd1`](https://github.com/terajuciptabina-eng/Arqenvo-2.0/commit/d27
 - Record exact package versions, OS/architecture, runtime/browser version, initialization and operation timing, memory method, topology/validity, failures, asset size and license notes.
 - Do not compare raw timing as a kernel ranking when representation and validation depth differ.
 
+## License inventory
+
+The benchmark workflow also emits a package-license inventory artifact for BRepJS/OCCT-WASM, Manifold and OpenGeometry dependency trees. It is not legal approval; review binary redistribution, notices, transitive licenses and the actual hosted/distributed delivery model separately.
+
 ## Selection gate
 
 No production kernel is selected until the full applicable K01–K15 matrix, B-Rep/topology checks, wall junction and hosted-opening behaviour, repeat-edit stability, STEP exchange, desktop and physical iPad Safari, worker behavior, performance, and commercial license review have sufficient reproducible evidence.
