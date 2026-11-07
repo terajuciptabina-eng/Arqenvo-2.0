@@ -1,9 +1,8 @@
-import { box, measureVolume, unwrap } from "brepjs/quick";
-
 const output = document.querySelector("#result");
 const startedAt = performance.now();
 
 try {
+  const { box, measureVolume, unwrap } = await import("brepjs/quick");
   const solid = box(1000, 200, 3000);
   const volumeMm3 = unwrap(measureVolume(solid));
   const operationMilliseconds = performance.now() - startedAt;
