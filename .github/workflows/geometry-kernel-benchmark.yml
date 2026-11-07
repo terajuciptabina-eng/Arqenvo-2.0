@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - "benchmarks/kernel-spike/**"
+      - "benchmarks/manifold-spike/**"
       - "docs/GEOMETRY_BENCHMARKS/**"
       - ".github/workflows/geometry-kernel-benchmark.yml"
 
@@ -89,5 +90,45 @@ jobs:
           path: |
             benchmarks/kernel-spike/benchmark-output/
             benchmarks/kernel-spike/package-lock.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  manifold-spike:
+    name: manifold-3d / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: benchmarks/manifold-spike
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: benchmarks/manifold-spike/package.json
+
+      - name: Install pinned Manifold dependency
+        run: npm install --no-audit --no-fund
+
+      - name: Run isolated Manifold benchmark
+        run: npm run bench
+
+      - name: Upload Manifold benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifold-kernel-spike-${{ matrix.os }}
+          path: |
+            benchmarks/manifold-spike/benchmark-output/
+            benchmarks/manifold-spike/package-lock.json
           if-no-files-found: warn
           retention-days: 30
