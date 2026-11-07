@@ -11,7 +11,7 @@ on:
       - "benchmarks/browser-spike/**"
       - "benchmarks/opengeometry-2-spike/**"
       - "benchmarks/license-audit.mjs"
-      - "docs/GEOMETRY_BENCHMARKS/fixtures/**"
+      - "docs/GEOMETRY_BENCHMARKS/**"
       - ".github/workflows/geometry-kernel-benchmark.yml"
 
 permissions:

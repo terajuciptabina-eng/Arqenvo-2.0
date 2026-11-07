@@ -1,17 +1,14 @@
-# Source code boundaries
+# ARQENVO 2.0 source boundaries
 
-The application source tree will be introduced after the architecture and geometry-kernel evaluation gates.
+The first executable domain/geometry vertical slice is now implemented.
 
-Planned domains:
-- app: application composition and lifecycle.
-- interface: workspace and UI components.
-- tools: modelling/documentation tool implementations.
-- interaction: input, selection, snapping and tool state machines.
-- bim: semantic elements, parameters and relationships.
-- geometry: kernel adapter and application geometry services.
-- viewport: 2D/3D rendering and camera.
-- documentation: views, annotations, layouts and publishing.
-- project: project state, transactions and commands.
-- storage: persistence, migration, autosave and recovery.
+- `bim/model.mjs`: semantic walls, composites, openings and project validation.
+- `geometry/vector.mjs`: deterministic 2D vector primitives.
+- `geometry/junction-solver.mjs`: endpoint/interior classification, L/angled miter plans and T-branch cap plans; cross junctions explicitly require a later solid-union operation.
+- `geometry/wall-derivation.mjs`: kernel-neutral per-skin prism and hosted-opening cut plans.
+- `geometry/adapter-contract.mjs`: kernel adapter boundary; no candidate kernel is selected or imported by the domain layer.
+- `project/project-store.mjs`: atomic semantic transactions with undo/redo.
 
-Do not create placeholder implementations that imply an unapproved architecture decision.
+All dimensions use millimetres and Z-up project coordinates. BIM semantics remain authoritative. Derived geometry is disposable and reproducible.
+
+The current junction solver is an independent first-pass solver, not a claim of Archicad parity. Wall-priority rules, complex composites, curved junctions and library-part reveal profiles remain gated on further reference evidence.

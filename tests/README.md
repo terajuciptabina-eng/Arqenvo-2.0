@@ -1,14 +1,24 @@
-# Test strategy
+# ARQENVO 2.0 — Test Strategy
 
-Tests will be introduced alongside the first executable prototype.
+The first executable greenfield vertical slice is covered by Node's built-in test runner. No third-party runtime or test dependency is required.
 
-Required layers:
-- Unit tests for pure domain and geometry adapter logic.
-- Kernel contract tests shared by every candidate adapter.
-- Geometry regression tests with fixed reference inputs and tolerances.
-- Domain tests for element relationships and dependency updates.
-- Interaction tests for tool state machines.
-- End-to-end browser tests for desktop and mobile workflows.
-- iPad Safari validation for touch and memory-sensitive workflows.
+Run from repository root:
 
-Every accepted Archicad reference scenario should map to at least one ARQENVO test case where automation is practical. Manual-only tests must include a reproducible checklist and evidence.
+```bash
+node --test tests/unit/*.test.mjs
+```
+
+Current automated coverage:
+- Semantic wall validation, finite parameters and positive dimensions.
+- Composite skin order, thickness closure and material identity.
+- Door/window host, anchor, elevation and bounds.
+- Kernel-neutral wall and opening derivation plans.
+- Deterministic L/T/cross junction classification and trim-plan generation.
+- Atomic project transactions and undo/redo.
+
+Next required layers:
+- Kernel contract tests shared by every adapter.
+- Exact B-Rep topology and Boolean regression tests.
+- Application-level dependency invalidation and regeneration.
+- Browser interaction and rendering tests.
+- Physical iPad Safari validation.

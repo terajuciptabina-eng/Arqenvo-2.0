@@ -17,12 +17,12 @@ ARQENVO 2.0 is a greenfield development. Its initial product objective is to rep
 
 ## Current status
 
-**Stage:** M1 — targeted Archicad 29 wall evidence review and geometry-kernel desk evaluation  
-**Production application:** Not started; isolated brepjs kernel spike prepared but not yet executed  
-**Platform:** Browser  
-**Geometry strategy:** Candidate review completed; runtime benchmarks and kernel selection remain open  
-**Reference:** Graphisoft Archicad 29 on macOS  
-**Deployment:** GitHub Pages is the preferred initial hosting target; deployment configuration is not yet enabled.
+**Stage:** M2 — greenfield BIM domain and wall-geometry vertical slice  
+**Production application:** Core semantic model, wall derivation, junction planning, composite skins, hosted-opening plans and project transactions implemented; browser UI/rendering not yet started  
+**Platform:** Browser target; core modules are dependency-free ECMAScript modules  
+**Geometry strategy:** Run #63 passed 11/11 hosted benchmark jobs; BRepJS + OCCT-WASM remains a prototype candidate behind an adapter, not a production selection  
+**Reference:** Graphisoft Archicad 29 on macOS; independent implementation only  
+**Deployment:** GitHub Pages remains preferred; no production deployment enabled.
 
 ## Repository guide
 
