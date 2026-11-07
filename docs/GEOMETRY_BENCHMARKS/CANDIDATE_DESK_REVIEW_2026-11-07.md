@@ -54,6 +54,13 @@ The current OpenGeometry GitHub repository README describes version 3.0.0. It do
 
 The project states that its API and package structure are evolving. Its 3.0 feature list excludes curves other than lines, circles and arcs, and lists some capabilities that existed in 2.0 as absent in 3.0. The prototype must therefore pin an exact published version and validate every required profile/curve workflow.
 
+**Runtime probe update (2026-11-07):** The exact npm package `opengeometry@2.0.18` initialized its WASM runtime and constructed a `Cuboid` in Playwright WebKit desktop and iPad-like emulation. The first probe found that the `Cuboid` wrapper exposes placement/configuration/edit methods but no obvious public `volume`, `validity`, `getBrep` or `getBounds` query on the wrapper. A follow-up probe is inspecting the nested kernel and package exports. This is only a browser initialization/construction pass; no Boolean, curved-wall, topology or STEP result is claimed.
+
+- Desktop WebKit: initialization + cuboid construction 45 ms.
+- iPad-like WebKit: initialization + cuboid construction 39 ms.
+- Package: opengeometry 2.0.18; Three.js 0.184.0; declared license MPL-2.0.
+- The package's current npm readme uses the 2.0 API. The upstream repository README explicitly says it describes 3.0 and that the 2.0 line has a different API. Keep those API lines separate.
+
 Potential fit: browser-first, Rust/WASM and Three.js integration.  
 Prototype questions: published version/API alignment, custom profile boundaries, exact arc handling, B-Rep access, Boolean reliability for multiple wall skins/openings, iPad Safari memory, rollback semantics, and whether worker execution covers geometry computation or only tessellation.
 
