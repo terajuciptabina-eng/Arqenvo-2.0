@@ -1,86 +1,121 @@
 # First Runtime Benchmark Report — 2026-11-07
 
-**Status:** Initial Node/WASM baseline completed. No production kernel selected.  
-**Runner commits:** BRepJS validation `b6b2009852c67f8ce14e8f36597a93d2b00ec461`; Manifold validation `b58aa3ff711e417af7b108e91011973210186b0c`.  
-**Geometry validation:** [Geometry Kernel Benchmark run #8](https://github.com/terajuciptabina-eng/Arqenvo-2.0/actions/runs/42356622815) — all four Ubuntu/macOS jobs succeeded with `validation.status = exact-match`.  
-**Browser verification:** [Geometry Kernel Benchmark run #17](https://github.com/terajuciptabina-eng/Arqenvo-2.0/actions/runs/42356963936) — BRepJS + OCCT-WASM passed desktop WebKit and iPad-like WebKit smoke tests.
+**Status:** Preliminary baseline only. No production kernel selected.  
+**Earlier evidence:** The initial BRepJS/Manifold baselines are recorded below as historical run evidence. Their original runs are distinct from Run #37.  
+**Current verification:** [Geometry Kernel Benchmark Run #37](https://github.com/terajuciptabina-eng/Arqenvo-2.0/actions/runs/42359457979), commit `ddb407f352331b3ab9f3ac1c804b2c92f188c446`.
 
 ## 1. Candidates and environment
 
-| Candidate | Exact package versions | Representation |
+| Candidate | Pinned package versions | Representation |
 |---|---|---|
 | BRepJS + OCCT-WASM | brepjs 20.18.0 / occt-wasm 5.15.0 | Exact B-Rep |
-| Manifold | manifold-3d 3.5.4 | Manifold triangle mesh; control/secondary representation only |
+| Manifold | manifold-3d 3.5.4 | Manifold triangle mesh; control/possible secondary representation |
+| OpenGeometry | opengeometry 2.0.18 / three 0.184.0 / Playwright 1.65.0 / Vite 8.3.6 | Browser/WASM analytic B-Rep API with tessellated mesh observation |
 
-Both candidates ran under Node 24.22.2 on GitHub-hosted Ubuntu x64 and macOS Apple Silicon arm64.
+## 2. Initial baseline — historical runs
 
-## 2. Analytic fixture results
-
-All tested volumes matched the shared analytic fixtures exactly on both operating systems.
+The initial baseline runs reported exact fixture volume matches for the cases shown in the earlier report:
 
 | Case | Expected volume | BRepJS + OCCT | Manifold |
 |---|---:|---:|---:|
 | K01 — straight wall | 600,000,000 mm³ | Exact match | Exact match |
 | K03 — pre-solved L-junction union | 2,970,000,000 mm³ | Exact match | Exact match |
-| K06 — three independent skins | 600,000,000 mm³ total | Exact match, all 3 skins | Not run in Manifold spike |
+| K06 — three independent skins | 600,000,000 mm³ total | Exact match, all 3 skins | Not run in the initial Manifold baseline |
 | K07 — door through all 3 skins | 222,000,000 mm³ | Exact match, all 3 skins | Exact match, all 3 skins |
 
-Manifold returned `NoError` for the tested solids. BRepJS exported STEP for all tested BRep cases. The current BRepJS smoke test does not yet perform a separate full topology inspection.
+These results are historical evidence from their cited runs; they must not be presented as Run #37 results.
 
-## 3. Timing results
+Manifold reported `NoError` for the tested mesh solids. BRepJS exported STEP files in its earlier benchmark. The earlier BRepJS suite did not establish complete independent topology inspection or architectural BIM solver parity.
 
-Times are one run per case and are **not** a statistically controlled performance ranking. Values are milliseconds.
+## 3. Run #37 — verified evidence as of 2026-11-07
+
+Run #37 was created from commit `ddb407f352331b3ab9f3ac1c804b2c92f188c446`.
+
+### 3.1 Manifold Ubuntu
+
+<badge>SUCCESS</badge> for the job `manifold-3d / ubuntu-latest`.
+
+- Package: `manifold-3d 3.5.4`
+- Runtime: Node 24.22.2, Ubuntu 26.04.1, Linux x64
+- Initialization: 19.8146 ms
+- Peak RSS reported after run: 61,992,960 bytes
+- K01: expected 600,000,000 mm³; measured 600,000,000 mm³; `NoError`
+- K03: expected 2,970,000,000 mm³; measured 2,970,000,000 mm³; `NoError`
+- K07: expected/measured remaining skin volumes 22,200,000 / 177,600,000 / 22,200,000 mm³; all deltas 0; each `NoError`
+- Total K07: expected/measured 222,000,000 mm³
+- Validation: `exact-match`; failures array empty
+
+The artifact `manifold-kernel-spike-ubuntu-latest` was downloaded and its JSON independently inspected. This is a mesh volume/topology result for the tested solids, not an exact B-Rep or CAD semantic validation. K07's separate skin outputs do not establish persistence of material identity through an application model.
+
+### 3.2 Other Run #37 jobs
+
+At the latest direct GitHub jobs query during this report update:
+
+| Job | Observed state | Interpretation |
+|---|---|---|
+| BRepJS Ubuntu | In progress | No final result available |
+| BRepJS macOS | Queued | Not tested in this run yet |
+| Manifold macOS | Queued | Not tested in this run yet |
+| BRepJS browser WebKit | Queued | Not tested in this run yet |
+| OpenGeometry 2.0.18 browser probe | Queued | Not tested in this run yet |
+| BRepJS curved K02 | Queued | Not tested in this run yet |
+| BRepJS curved K10 | Queued | Not tested in this run yet |
+
+The GitHub API returned `BlobNotFound` when the live log endpoint was requested for the running/queued jobs. This is not a benchmark failure. Their status must be refreshed before further interpretation.
+
+## 4. Timing results — historical, not a current performance ranking
+
+The following values are from the earlier baseline report, not Run #37. They are one-run observations, not statistically controlled benchmarks.
 
 | Candidate / platform | WASM init | K01 | K03 | K06 | K07 | Peak RSS |
 |---|---:|---:|---:|---:|---:|---:|
-| BRepJS / macOS arm64 | 94.47 | 65.48 | 81.71 | 9.12 | 38.40 | 381.3 MB |
-| BRepJS / Ubuntu x64 | 268.86 | 228.57 | 220.18 | 39.14 | 184.07 | 323.2 MB |
-| Manifold / macOS arm64 | 12.05 | 2.78 | 3.53 | — | 1.28 | 60.5 MB |
-| Manifold / Ubuntu x64 | 18.78 | 2.77 | 7.52 | — | 2.18 | 60.8 MB |
+| BRepJS / macOS arm64 | 94.47 ms | 65.48 ms | 81.71 ms | 9.12 ms | 38.40 ms | 381.3 MB |
+| BRepJS / Ubuntu x64 | 268.86 ms | 228.57 ms | 220.18 ms | 39.14 ms | 184.07 ms | 323.2 MB |
+| Manifold / macOS arm64 | 12.05 ms | 2.78 ms | 3.53 ms | — | 1.28 ms | 60.5 MB |
+| Manifold / Ubuntu x64 | 18.78 ms | 2.77 ms | 7.52 ms | — | 2.18 ms | 60.8 MB |
 
-Do not interpret the raw timing gap as a like-for-like kernel victory: Manifold operates on triangle meshes, while BRepJS + OCCT operates on exact B-Rep geometry. Their output representations, validation depth and downstream CAD capabilities differ.
+Do not interpret this as a like-for-like kernel victory: Manifold operates on triangle meshes, while BRepJS + OCCT operates on exact B-Rep geometry.
 
-## 4. Important benchmark corrections made
+## 5. Historical browser WebKit smoke test
 
-The first run exposed benchmark-fixture placement errors, not kernel failures:
+An earlier BRepJS + OCCT-WASM browser smoke run passed Playwright WebKit desktop and iPad-like emulation:
 
-1. Box placement coordinates were treated as minimum corners, while the constructors use the supplied placement as a centre. The benchmark now computes box centres from the analytic min/max coordinates.
-2. The door cutter was extended 1 mm above the door head. The fixture's overrun applies to the through-wall depth, not the vertical opening height. The cutter now extends through wall thickness only and keeps the exact sill/head elevations.
-3. Strict analytic volume comparisons are now written into the runner report and cause CI to fail when a measured volume differs from the fixture. This strict check is only for the current axis-aligned analytic box cases; it is not a general approved modelling tolerance.
-
-These corrections changed the K03 and K07 outputs to exact analytic matches. They are documented to prevent repeating the earlier false results.
-
-## 5. Interpretation
-
-- **BRepJS + OCCT-WASM is the current leading B-Rep prototype candidate.** It passed K01, K03, K06 and K07 analytic volume checks on both hosted platforms and produced STEP exports.
-- **Manifold is a very fast mesh Boolean control.** It also matched K01, K03 and K07 analytic volumes, but it is not a replacement for an authoritative parametric B-Rep model. It remains relevant as a possible derived-mesh or secondary operation layer.
-- This report does not prove Archicad-equivalent wall junction behaviour. K03 supplies precomputed wall-end boundaries and tests only the solid union. BIM wall priority/trim logic remains outside the kernel test.
-- This report does not prove actual iPad Safari compatibility or performance.
-- No candidate has passed the complete K01–K15 plan, physical-device Safari checks, topology inspection, or legal review.
-
-
-## 6. Browser WebKit smoke test
-
-The BRepJS + OCCT-WASM browser smoke test also passed in GitHub Actions on macOS arm64 using Playwright WebKit 27.2, Node 24.22.2, Vite 8.3.6 and Playwright 1.65.0.
-
-| Profile | Result | Browser-side geometry operation | Page elapsed |
+| Profile | Result | Browser geometry operation | Page elapsed |
 |---|---|---:|---:|
-| WebKit desktop | Pass; 600,000,000 mm³ exact | 247 ms | 691.84 ms |
-| iPad-like WebKit emulation | Pass; 600,000,000 mm³ exact | 158 ms | 325.16 ms |
+| WebKit desktop | Pass; 600,000,000 mm³ | 247 ms | 691.84 ms |
+| iPad-like WebKit emulation | Pass; 600,000,000 mm³ | 158 ms | 325.16 ms |
 
-Both profiles reported no browser errors, console errors or failed requests.
+This does not represent Run #37's still-queued browser job, nor Apple's installed Safari or physical iPad/iPhone hardware.
 
-**Integration finding:** the browser harness uses explicit kernel initialization with `OcctKernel.init({ wasm: wasmUrl })` followed by `registerKernel("occt-wasm", OcctWasmAdapter.fromKernel(kernel))`. The initial `brepjs/quick` Vite import path failed in this harness during backend loading; the explicit initialization path passed. This is why the app integration should use explicit startup/loading/error handling rather than assuming the quick entry is suitable for every bundler context.
+## 6. OpenGeometry 2.0.18 probe scope
 
-This is a Playwright WebKit build with an iPad-like emulation profile. It is not Apple's installed Safari and does not replace testing on a physical iPad/iPhone.
+Source audit of `benchmarks/opengeometry-2-spike/src/main.js` confirms that the current probe:
+- initializes OpenGeometry 2.0.18 in browser WASM;
+- constructs a `Cuboid`;
+- constructs one analytic cuboid host and cutter;
+- calls `booleanSubtraction`;
+- computes cut volume from tessellated Three.js `BufferGeometry`;
+- serializes the analytic B-Rep and calls `validateAnalyticBrep`;
+- reports the validation output separately.
 
-## 7. Remaining candidate work and selection gate
+The browser benchmark passes its primary status check only when the tessellated mesh volume is within 1e-6 m³ of 0.222 m³. This is one straight cuboid subtraction. It is not a complete architectural wall test, a native exact-volume proof, multi-skin test, curved-wall test, STEP round-trip or full topology gate.
 
-| Candidate | Next action | Status |
-|---|---|---|
-| BRepJS + OCCT-WASM | Expand to curved walls, T/cross junctions, repeated edits, validity checks, STEP round-trip, browser worker and iPad Safari | Initial baseline passed |
-| Manifold | Extend mesh control to more opening/curved/complex mesh cases; assess whether a secondary mesh role is useful | Initial baseline passed |
-| OpenGeometry | Resolve exact published 2.0 package/API versus repository 3.0 API before writing an adapter; pin and test one exact release | Blocked on version/API alignment |
-| Direct opencascade.js | Verify current WASM release, exposed APIs, build size and maintenance before deciding whether to run as a separate fallback | Not yet benchmarked |
+## 7. Interpretation and known limitations
 
-Production selection remains deferred until the full shared fixture suite, browser/device tests, topology validation, adapter proof and license review are complete.
+- BRepJS + OCCT-WASM remains the leading B-Rep prototype to evaluate, based on earlier baseline evidence, not a production selection.
+- Manifold is a mesh-kernel control and may still be useful as a derived-mesh layer. It is not an authoritative parametric B-Rep candidate.
+- K03 uses precomputed wall-end boundaries and tests Boolean union only; it does not establish Archicad-like wall priority or trim rules.
+- K06/K07 separate skin solids and test their volumes; material identity persistence through a BIM model remains unproven.
+- K12's current runner compares equal volumes before/after movement. It does not itself prove the opening actually moved geometrically.
+- K13 regenerates shapes from parameters and records process RSS observations. It is not a definitive long-duration memory-leak test.
+- K15 exports/imports STEP and compares volume in the runner, but STEP content and topology evidence must be reviewed independently.
+- No physical iPad Safari test, full topology/validity inspection across the suite, production worker integration, controlled performance study or legal approval has been completed.
+
+## 8. Next verification gate
+
+1. Refresh Run #37 until all jobs reach terminal states.
+2. Download and inspect every available BRepJS, curved, WebKit and OpenGeometry artifact.
+3. Verify K12 position/geometry differences, K13 repeat stability and memory methodology, and K15 STEP geometry and round-trip values.
+4. Examine any failed case against the fixture and actual kernel output. Do not relax expected values to manufacture a pass.
+5. Update this report with terminal job conclusions and evidence links.
+6. Keep production kernel selection open pending full benchmark, device, performance, worker and licensing checks.
