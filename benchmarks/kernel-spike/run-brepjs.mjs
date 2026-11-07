@@ -40,13 +40,16 @@ async function saveStep(shape, filename) {
 }
 
 async function runCase(id, fn) {
+  console.log(`[${id}] started`);
   const started = performance.now();
   try {
     const value = await fn();
     results.push({ id, status: "completed", operationMilliseconds: performance.now() - started, ...value });
+    console.log(`[${id}] completed in ${results.at(-1).operationMilliseconds.toFixed(2)} ms`);
   } catch (error) {
     const message = error instanceof Error ? error.stack ?? error.message : String(error);
     failures.push({ id, error: message });
+    console.error(`[${id}] failed: ${message}`);
     results.push({ id, status: "failed", operationMilliseconds: performance.now() - started, error: message });
   }
 }
