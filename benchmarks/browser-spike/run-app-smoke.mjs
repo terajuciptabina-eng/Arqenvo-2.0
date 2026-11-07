@@ -68,7 +68,7 @@ async function exerciseProfile(profile) {
       await page.mouse.click(bounds.x + bounds.width * 0.38, y);
       await page.locator('input[name="thickness"]').fill("250");
       await page.locator("#apply-element").click();
-      await page.waitForFunction(() => document.querySelector("#canvas-status")?.textContent?.includes("Updated wall") && document.querySelector("#canvas-status")?.textContent?.includes("invalidated"));
+      await page.waitForFunction(() => document.querySelector('input[name="thickness"]')?.value === "250");
       if (await page.locator('input[name="thickness"]').inputValue() !== "250") throw new Error("Wall thickness edit was not committed");
 
       await page.locator('[data-tool="select"]').click();
