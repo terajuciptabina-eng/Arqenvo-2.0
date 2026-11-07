@@ -119,3 +119,22 @@ The browser benchmark passes its primary status check only when the tessellated 
 4. Examine any failed case against the fixture and actual kernel output. Do not relax expected values to manufacture a pass.
 5. Update this report with terminal job conclusions and evidence links.
 6. Keep production kernel selection open pending full benchmark, device, performance, worker and licensing checks.
+
+## Run #37 artifact audit supplement (2026-11-07)
+
+Run #37 overall conclusion: `cancelled`, not passed. The workflow was interrupted after a documentation push because its prior concurrency setting used `cancel-in-progress: true`. Only the Manifold Ubuntu job completed normally; the BRepJS Ubuntu artifact had already uploaded before cancellation. All other jobs were cancelled before final evidence was produced.
+
+The BRepJS Ubuntu artifact was downloaded and independently inspected. It contains 11 STEP files for K01, K03, K04, K05, K06 (three separate skins), K07 (three separate cut skins) and K09. The benchmark JSON report was not present in the artifact, so this review does not infer operation timings or the runner's final validation result from missing output.
+
+Each of the 11 STEP files was imported using an independent OCCT-based Python reader and checked with `BRepCheck_Analyzer`. All imported as one valid solid each. Imported volumes matched the relevant analytic references:
+- K01: 600,000,000 mm³
+- K03: 2,970,000,000 mm³
+- K04: 2,940,000,000 mm³
+- K05: 3,480,000,000 mm³
+- K06: 60,000,000 / 480,000,000 / 60,000,000 mm³
+- K07: 22,200,000 / 177,600,000 / 22,200,000 mm³
+- K09: 1,128,000,000 mm³
+
+This independently supports STEP readability, single-solid import and valid imported topology for those exported samples. It does not recover the missing benchmark report or establish K08/K11/K12/K13/K15 completion. It also does not prove ARQENVO BIM junction rules or semantic skin metadata.
+
+The workflow concurrency setting has since been corrected to `cancel-in-progress: false` in commit `cd4ac8b1e049d9920c18036b23afaa514ed56ec4`. That correction protects future runs but cannot restore jobs cancelled in Run #37.
