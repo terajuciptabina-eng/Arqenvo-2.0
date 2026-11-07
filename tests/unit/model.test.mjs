@@ -27,3 +27,21 @@ test("opening anchors resolve and host bounds are enforced", () => {
   assert.equal(left.positionAlongBaseline, 500);
   assert.throws(() => createOpening({ id: "d2", type: "window", hostWallId: host.id, positionAlongBaseline: 100, width: 900, height: 1200, sillElevation: 900 }) && validateProject({ ...createProject(), walls: { w1: host }, composites: {}, openings: { d2: { id:"d2",type:"window",hostWallId:"w1",anchor:"center",positionAlongBaseline:100,width:900,height:1200,sillElevation:900,revealDepth:0,revision:1 } }, junctions:{} }), /fit/);
 });
+
+test("project rejects overlapping door and window cuts on the same host", () => {
+  const host = wall();
+  const project = createProject();
+  project.walls.w1 = host;
+  project.openings.door = createOpening({ id: "door", type: "door", hostWallId: "w1", positionAlongBaseline: 1000, width: 900, height: 2100 });
+  project.openings.window = createOpening({ id: "window", type: "window", hostWallId: "w1", positionAlongBaseline: 1200, width: 800, height: 1200, sillElevation: 900 });
+  assert.throws(() => validateProject(project), /overlap on host wall/);
+});
+
+test("project allows vertically separated openings with shared horizontal extent", () => {
+  const host = wall();
+  const project = createProject();
+  project.walls.w1 = host;
+  project.openings.door = createOpening({ id: "door", type: "door", hostWallId: "w1", positionAlongBaseline: 1000, width: 900, height: 2100 });
+  project.openings.transom = createOpening({ id: "transom", type: "window", hostWallId: "w1", positionAlongBaseline: 1000, width: 900, height: 500, sillElevation: 2200 });
+  assert.equal(validateProject(project), true);
+});

@@ -32,25 +32,25 @@ async function exerciseProfile(profile) {
 
     await page.locator('[data-tool="wall"]').click();
     const y = bounds.y + bounds.height * 0.5;
-    await page.mouse.move(bounds.x + bounds.width * 0.32, y);
+    await page.mouse.move(bounds.x + bounds.width * 0.2, y);
     await page.mouse.down();
-    await page.mouse.move(bounds.x + bounds.width * 0.68, y, { steps: 8 });
+    await page.mouse.move(bounds.x + bounds.width * 0.8, y, { steps: 8 });
     await page.mouse.up();
     await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("1 walls"));
 
     // Add a perpendicular branch at the first wall's end to exercise live L-junction derivation.
     await page.locator('[data-tool="wall"]').click();
-    await page.mouse.move(bounds.x + bounds.width * 0.68, y);
+    await page.mouse.move(bounds.x + bounds.width * 0.8, y);
     await page.mouse.down();
-    await page.mouse.move(bounds.x + bounds.width * 0.68, y + bounds.height * 0.22, { steps: 8 });
+    await page.mouse.move(bounds.x + bounds.width * 0.8, y + bounds.height * 0.22, { steps: 8 });
     await page.mouse.up();
     await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("2 walls"));
 
     await page.locator('[data-tool="door"]').click();
-    await page.mouse.click(bounds.x + bounds.width * 0.5, y);
+    await page.mouse.click(bounds.x + bounds.width * 0.34, y);
     await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("1 openings"));
     await page.locator('[data-tool="window"]').click();
-    const windowX = bounds.x + bounds.width * 0.57;
+    const windowX = bounds.x + bounds.width * 0.68;
     if (profile.name === "webkit-ipad-like") await page.touchscreen.tap(windowX, y);
     else await page.mouse.click(windowX, y);
     await page.waitForFunction(() => document.querySelector("#element-count")?.textContent?.includes("2 openings"));
@@ -66,20 +66,20 @@ async function exerciseProfile(profile) {
 
     if (profile.name === "webkit-desktop") {
       await page.locator('[data-tool="select"]').click();
-      await page.mouse.click(bounds.x + bounds.width * 0.38, y);
+      await page.mouse.click(bounds.x + bounds.width * 0.23, y);
       await page.locator('input[name="thickness"]').fill("250");
       await page.locator("#apply-element").click();
       await page.waitForFunction(() => document.querySelector('input[name="thickness"]')?.value === "250");
       if (await page.locator('input[name="thickness"]').inputValue() !== "250") throw new Error("Wall thickness edit was not committed");
 
       await page.locator('[data-tool="select"]').click();
-      await page.mouse.click(bounds.x + bounds.width * 0.46, y);
+      await page.mouse.click(bounds.x + bounds.width * 0.34, y);
       await page.locator('input[name="width"]').fill("850");
       await page.locator("#apply-element").click();
       if (await page.locator('input[name="width"]').inputValue() !== "850") throw new Error("Opening width edit was not committed");
       await page.locator("#undo").click();
       await page.locator('[data-tool="select"]').click();
-      await page.mouse.click(bounds.x + bounds.width * 0.46, y);
+      await page.mouse.click(bounds.x + bounds.width * 0.34, y);
       if (await page.locator('input[name="width"]').inputValue() !== "900") throw new Error("Opening edit undo did not restore width");
       await page.locator("#redo").click();
     }

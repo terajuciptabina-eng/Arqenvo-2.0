@@ -146,6 +146,36 @@ export function validateProject(project) {
     if (!host) throw new RangeError(`Opening ${opening.id} references missing host wall ${opening.hostWallId}`);
     validateOpening(opening, host);
   }
+  const openingsByHost = new Map();
+  for (const opening of Object.values(project.openings)) {
+    const host = project.walls[opening.hostWallId];
+    const center = opening.anchor === "center"
+      ? opening.positionAlongBaseline
+      : opening.anchor === "left"
+        ? opening.positionAlongBaseline + opening.width / 2
+        : opening.positionAlongBaseline - opening.width / 2;
+    const range = {
+      id: opening.id,
+      start: center - opening.width / 2,
+      end: center + opening.width / 2,
+      sill: opening.sillElevation,
+      head: opening.sillElevation + opening.height
+    };
+    if (!openingsByHost.has(host.id)) openingsByHost.set(host.id, []);
+    openingsByHost.get(host.id).push(range);
+  }
+  for (const [hostId, ranges] of openingsByHost) {
+    for (let i = 0; i < ranges.length; i += 1) {
+      for (let j = i + 1; j < ranges.length; j += 1) {
+        const a = ranges[i], b = ranges[j];
+        const horizontalOverlap = Math.min(a.end, b.end) - Math.max(a.start, b.start);
+        const verticalOverlap = Math.min(a.head, b.head) - Math.max(a.sill, b.sill);
+        if (horizontalOverlap > 1e-6 && verticalOverlap > 1e-6) {
+          throw new RangeError(`Openings ${a.id} and ${b.id} overlap on host wall ${hostId}`);
+        }
+      }
+    }
+  }
   for (const wall of Object.values(project.walls)) {
     if (wall.compositeId) {
       const composite = project.composites[wall.compositeId];

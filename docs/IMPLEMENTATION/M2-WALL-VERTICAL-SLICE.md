@@ -4,7 +4,7 @@
 
 ## Implemented
 
-- Semantic wall, composite and opening records with finite-value, dimensional, host and reference checks.
+- Semantic wall, composite and opening records with finite-value, dimensional, host and reference checks; project validation rejects horizontally and vertically overlapping cuts on the same host while allowing vertically separated transom-style openings.
 - Millimetre project coordinates, Z-up.
 - Ordered composite skins with material identity and total-thickness closure.
 - Straight-wall prism plans with center, left and right reference-line offsets.
