@@ -176,28 +176,59 @@ export function solveWallJunctions(walls, options = {}) {
       if (!geometry && type !== "CROSS") diagnostics.push({ code: "JUNCTION_GEOMETRY_UNRESOLVED", junctionId: junction.id });
     }
   }
-  const clusters = [];
-  for (const junction of junctions) {
-    if (!junction.point) continue;
-    let cluster = clusters.find((item) => distance(item.point, junction.point) <= tolerance);
-    if (!cluster) {
-      cluster = { point: junction.point, items: [] };
-      clusters.push(cluster);
+  // Build connected components of nearby junction points. Union-find makes
+  // tolerance clustering transitive and independent of pair-discovery order.
+  const pointJunctions = junctions.filter((junction) => junction.point);
+  const parent = pointJunctions.map((_, index) => index);
+  const find = (index) => {
+    let root = index;
+    while (parent[root] !== root) root = parent[root];
+    while (parent[index] !== index) {
+      const next = parent[index];
+      parent[index] = root;
+      index = next;
     }
-    cluster.items.push(junction);
+    return root;
+  };
+  const unite = (a, b) => {
+    const rootA = find(a);
+    const rootB = find(b);
+    if (rootA !== rootB) parent[Math.max(rootA, rootB)] = Math.min(rootA, rootB);
+  };
+  for (let i = 0; i < pointJunctions.length; i += 1) {
+    for (let j = i + 1; j < pointJunctions.length; j += 1) {
+      if (distance(pointJunctions[i].point, pointJunctions[j].point) <= tolerance) unite(i, j);
+    }
+  }
+
+  const components = new Map();
+  for (let i = 0; i < pointJunctions.length; i += 1) {
+    const root = find(i);
+    if (!components.has(root)) components.set(root, []);
+    components.get(root).push(pointJunctions[i]);
   }
   const resolvedJunctions = [];
   const clustered = new Set();
-  for (const cluster of clusters) {
-    const wallIds = [...new Set(cluster.items.flatMap((item) => item.wallIds))].sort();
+  for (const items of components.values()) {
+    const wallIds = [...new Set(items.flatMap((item) => item.wallIds))].sort();
     if (wallIds.length > 2) {
+      const points = items.map((item) => item.point).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      const point = [
+        points.reduce((sum, value) => sum + value[0], 0) / points.length,
+        points.reduce((sum, value) => sum + value[1], 0) / points.length
+      ];
+      const junctionIds = items.map((item) => item.id).sort();
       const id = `junction:cluster:${wallIds.join(":")}`;
       resolvedJunctions.push({
-        id, type: "MULTI_WALL", wallIds, point: cluster.point,
-        geometry: null, operation: "manual-review", pairCount: cluster.items.length
+        id, type: "MULTI_WALL", wallIds, point,
+        geometry: null, operation: "manual-review",
+        pairCount: items.length, junctionIds
       });
-      diagnostics.push({ code: "MULTI_WALL_CLUSTER_REQUIRES_PRIORITY_RESOLUTION", junctionId: id, wallIds });
-      for (const item of cluster.items) clustered.add(item);
+      diagnostics.push({
+        code: "MULTI_WALL_CLUSTER_REQUIRES_PRIORITY_RESOLUTION",
+        junctionId: id, wallIds, junctionIds
+      });
+      for (const item of items) clustered.add(item);
     }
   }
   for (const junction of junctions) {
