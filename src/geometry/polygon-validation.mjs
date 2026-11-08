@@ -88,3 +88,55 @@ export function validateSimplePolygon(points, options = {}) {
 
   return { valid: true, area, winding: area > 0 ? "counterclockwise" : "clockwise" };
 }
+
+
+/**
+ * Validate the adjacency contract for an ordered wall-skin stack.
+ * This checks 2D shared boundaries and Z-range consistency, not 3D solid topology.
+ */
+export function validateSkinStack(skins, options = {}) {
+  const tolerance = options.tolerance ?? 1e-7;
+  if (!Number.isFinite(tolerance) || tolerance <= 0) throw new RangeError("Skin-stack tolerance must be a positive finite number");
+  if (!Array.isArray(skins) || skins.length === 0) {
+    return { valid: false, code: "SKIN_STACK_EMPTY" };
+  }
+
+  for (let index = 0; index < skins.length; index += 1) {
+    const skin = skins[index];
+    if (!skin || !Number.isInteger(skin.order) || skin.order !== index) {
+      return { valid: false, code: "SKIN_STACK_ORDER_INVALID", skinIndex: index };
+    }
+    if (!Array.isArray(skin.offsetRange) || skin.offsetRange.length !== 2
+      || !skin.offsetRange.every(Number.isFinite) || skin.offsetRange[1] <= skin.offsetRange[0]) {
+      return { valid: false, code: "SKIN_OFFSET_RANGE_INVALID", skinIndex: index };
+    }
+    if (!Array.isArray(skin.zRange) || skin.zRange.length !== 2
+      || !skin.zRange.every(Number.isFinite) || skin.zRange[1] <= skin.zRange[0]) {
+      return { valid: false, code: "SKIN_Z_RANGE_INVALID", skinIndex: index };
+    }
+    const footprint = validateSimplePolygon(skin.footprint, { tolerance });
+    if (!footprint.valid) {
+      return { valid: false, code: "SKIN_FOOTPRINT_INVALID", skinIndex: index, reason: footprint.code };
+    }
+  }
+
+  for (let index = 0; index < skins.length - 1; index += 1) {
+    const current = skins[index];
+    const next = skins[index + 1];
+    if (Math.abs(current.offsetRange[1] - next.offsetRange[0]) > tolerance) {
+      return { valid: false, code: "SKIN_OFFSET_GAP_OR_OVERLAP", skinIndices: [index, index + 1] };
+    }
+    if (Math.abs(current.zRange[0] - next.zRange[0]) > tolerance
+      || Math.abs(current.zRange[1] - next.zRange[1]) > tolerance) {
+      return { valid: false, code: "SKIN_Z_RANGE_MISMATCH", skinIndices: [index, index + 1] };
+    }
+    const sharedBoundaryMatches =
+      distance(current.footprint[2], next.footprint[1]) <= tolerance
+      && distance(current.footprint[3], next.footprint[0]) <= tolerance;
+    if (!sharedBoundaryMatches) {
+      return { valid: false, code: "SKIN_SHARED_BOUNDARY_MISMATCH", skinIndices: [index, index + 1] };
+    }
+  }
+
+  return { valid: true, skinCount: skins.length };
+}
