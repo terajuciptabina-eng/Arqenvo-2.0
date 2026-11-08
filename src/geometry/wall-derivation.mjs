@@ -3,6 +3,7 @@ import { dot, leftNormal, normalize, scale, sub } from "./vector.mjs";
 import { solveWallJunctions } from "./junction-solver.mjs";
 import { validateSimplePolygon, validateSkinStack } from "./polygon-validation.mjs";
 import { validateJunctionCandidate } from "./junction-domain-validation.mjs";
+import { validateJunctionNetwork } from "./junction-network-validation.mjs";
 
 export function deriveWallPlan(wall, composite = null, openings = []) {
   validateWall(wall);
@@ -120,6 +121,8 @@ export function deriveProjectPlan(project, options = {}) {
     const openings = Object.values(project.openings ?? {}).filter((opening) => opening.hostWallId === wall.id);
     return [wall.id, deriveWallPlan(wall, composite, openings)];
   }));
+  const junctionNetworkValidation = validateJunctionNetwork(junctionResult.junctions, project, { tolerance: options.tolerance ?? 1e-6 });
+  const networkResolutionById = new Map(junctionNetworkValidation.resolutions.map((item) => [item.junctionId, item]));
   const junctionResolutions = [];
   const diagnostics = [...junctionResult.diagnostics];
   for (const junction of junctionResult.junctions) {
@@ -148,6 +151,23 @@ export function deriveProjectPlan(project, options = {}) {
         junctionId: junction.id,
         reason: domainValidation.code,
         affectedWallIds: [...junction.wallIds]
+      });
+      continue;
+    }
+
+    const networkResolution = networkResolutionById.get(junction.id);
+    if (networkResolution && !networkResolution.valid) {
+      junctionResolutions.push({
+        junctionId: junction.id,
+        status: "BLOCKED",
+        reason: "WALL_ENDPOINT_CLAIMED_BY_MULTIPLE_JUNCTIONS",
+        affectedWallIds: [...junction.wallIds],
+        networkConflicts: networkResolution.conflicts
+      });
+      diagnostics.push({
+        code: "JUNCTION_NETWORK_VALIDATION_FAILED",
+        junctionId: junction.id,
+        conflicts: networkResolution.conflicts
       });
       continue;
     }
@@ -235,5 +255,5 @@ export function deriveProjectPlan(project, options = {}) {
       return { skinId: skin.id, ...validation };
     });
   }
-  return { walls: plans, junctions: junctionResult.junctions, junctionResolutions, diagnostics, geometryValidation, skinStackValidation };
+  return { walls: plans, junctions: junctionResult.junctions, junctionResolutions, junctionNetworkValidation, diagnostics, geometryValidation, skinStackValidation };
 }
