@@ -2,6 +2,7 @@ import { validateComposite, validateOpening, validateWall } from "../bim/model.m
 import { dot, leftNormal, normalize, scale, sub } from "./vector.mjs";
 import { solveWallJunctions } from "./junction-solver.mjs";
 import { validateSimplePolygon, validateSkinStack } from "./polygon-validation.mjs";
+import { validateJunctionCandidate } from "./junction-domain-validation.mjs";
 
 export function deriveWallPlan(wall, composite = null, openings = []) {
   validateWall(wall);
@@ -128,6 +129,24 @@ export function deriveProjectPlan(project, options = {}) {
         junctionId: junction.id,
         status: "BLOCKED",
         reason: !junction.geometry ? "NO_CANDIDATE_GEOMETRY" : "UNSUPPORTED_JUNCTION_TYPE",
+        affectedWallIds: [...junction.wallIds]
+      });
+      continue;
+    }
+
+    const domainValidation = validateJunctionCandidate(junction, project, { tolerance: options.tolerance ?? 1e-6 });
+    if (!domainValidation.valid) {
+      junctionResolutions.push({
+        junctionId: junction.id,
+        status: "BLOCKED",
+        reason: domainValidation.code,
+        affectedWallIds: [...junction.wallIds],
+        domainValidation
+      });
+      diagnostics.push({
+        code: "JUNCTION_DOMAIN_VALIDATION_FAILED",
+        junctionId: junction.id,
+        reason: domainValidation.code,
         affectedWallIds: [...junction.wallIds]
       });
       continue;
