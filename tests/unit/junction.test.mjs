@@ -96,3 +96,35 @@ test("parallel non-collinear wall baselines are not reported as junctions", () =
   assert.equal(result.junctions.length, 0);
   assert.equal(result.diagnostics.length, 0);
 });
+
+
+test("multi-wall clustering is transitive across a tolerance chain", () => {
+  const tolerance = 1e-6;
+  const walls = [
+    createWall({ id: "a", baseline: [[-1, 0], [1, 0]], thickness: 100, height: 3000 }),
+    createWall({ id: "b", baseline: [[0, -1], [0, 1]], thickness: 100, height: 3000 }),
+    createWall({ id: "c", baseline: [[-1, 1 + 0.75 * tolerance], [1, -1 + 0.75 * tolerance]], thickness: 100, height: 3000 })
+  ];
+  const result = solveWallJunctions(walls, { tolerance });
+  assert.equal(result.junctions.length, 1);
+  assert.equal(result.junctions[0].type, "MULTI_WALL");
+  assert.equal(result.junctions[0].pairCount, 3);
+  assert.equal(result.junctions[0].junctionIds.length, 3);
+  assert.deepEqual(result.junctions[0].wallIds, ["a", "b", "c"]);
+});
+
+test("multi-wall cluster identity is stable when wall input order changes", () => {
+  const walls = [
+    createWall({ id: "a", baseline: [[0, 0], [1000, 0]], thickness: 200, height: 3000 }),
+    createWall({ id: "b", baseline: [[1000, 0], [1000, 1000]], thickness: 200, height: 3000 }),
+    createWall({ id: "c", baseline: [[1000, 0], [2000, 1000]], thickness: 200, height: 3000 }),
+    createWall({ id: "d", baseline: [[1000, 0], [0, 1000]], thickness: 200, height: 3000 })
+  ];
+  const forward = solveWallJunctions(walls).junctions[0];
+  const reversed = solveWallJunctions([...walls].reverse()).junctions[0];
+  assert.equal(forward.type, "MULTI_WALL");
+  assert.equal(reversed.type, "MULTI_WALL");
+  assert.deepEqual(forward.wallIds, reversed.wallIds);
+  assert.deepEqual(forward.junctionIds, reversed.junctionIds);
+  assert.deepEqual(forward.point, reversed.point);
+});
