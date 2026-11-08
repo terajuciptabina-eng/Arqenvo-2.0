@@ -58,6 +58,14 @@ The current solver is therefore an independent deterministic first-pass geometry
 - Invalid candidates are reported as `BLOCKED` with a stable reason code and `JUNCTION_DOMAIN_VALIDATION_FAILED`; no candidate plan is mutated.
 - These are generic domain invariants inspired by the staged-validation shape in the evidence dossier. They are not a reconstruction of Graphisoft's proprietary `EndJunctionDomainsTest` or its missing priority decision table.
 
+## Connected junction network validation added 2026-11-08
+
+- Added a wall/junction graph pass that groups pairwise junctions into connected networks and reports sorted wall IDs, junction IDs, and per-wall junction counts.
+- A wall may participate in more than one junction when the candidates consume distinct endpoints; the derivation pipeline applies those candidates sequentially to the latest accepted plan for that wall.
+- A single wall endpoint cannot be claimed by multiple junction candidates. Conflicting candidates are blocked before plan staging with `WALL_ENDPOINT_CLAIMED_BY_MULTIPLE_JUNCTIONS` and `JUNCTION_NETWORK_VALIDATION_FAILED`.
+- Network membership and summary ordering are deterministic under junction input reordering.
+- This validates endpoint ownership and graph connectivity only. It does not solve multi-wall priority, simultaneous multi-junction trimming, 3D union topology, or Graphisoft's proprietary domain tests.
+
 ## Known limitations and next gates
 
 1. The current junction solver handles pairwise straight-segment intersections and applies candidate caps to per-skin footprints through staged acceptance. Multi-wall clusters are detected and deliberately withheld for priority resolution; acute/near-collinear miters are rejected by a configurable miter-ratio limit. Collinear overlaps and endpoint contacts are detected and blocked. Derived 2D skin footprints are checked for simple-polygon validity, but priority-based resolution, complete multi-polygon topology validation and 3D B-Rep validity remain unimplemented; current skin-stack checks cover only ordered 2D adjacency and Z-range consistency.
