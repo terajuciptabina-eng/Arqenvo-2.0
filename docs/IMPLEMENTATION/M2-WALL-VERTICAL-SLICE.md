@@ -22,6 +22,15 @@ The REA dossier review supports neighbour-aware wall adjustment, staged L-juncti
 
 The current solver is therefore an independent deterministic first-pass geometry plan. It does not claim Graphisoft wall-priority parity. No proprietary algorithm or source is copied.
 
+## Collinear baseline handling added 2026-11-08
+
+- Parallel collinear baselines are now distinguished from non-collinear parallel walls.
+- End-to-end collinear walls are reported as `STRAIGHT` junctions and explicitly deferred to wall-priority resolution; no unsupported trim is fabricated.
+- Positive-length collinear baseline overlap is reported as `COLLINEAR_OVERLAP` with the overlap interval and length, and is blocked for manual review.
+- Collinear endpoint-to-interior contact is reported as `COLLINEAR_TOUCH` and deferred for priority resolution.
+- Parallel non-collinear baselines remain non-junctions.
+- Regression coverage was added for straight joins, overlapping baselines and separated parallel walls. These checks detect relationships; they do not resolve Archicad wall priority or produce final joined solids.
+
 ## Known limitations and next gates
 
 1. The current junction solver handles pairwise straight-segment intersections and applies the resulting cap to per-skin footprints. Multi-wall clusters are detected and deliberately withheld for priority resolution; acute/near-collinear miters are rejected by a configurable miter-ratio limit. Overlap/coincident baselines, wall priorities and complete polygon topology validation remain unimplemented.
