@@ -87,3 +87,25 @@ test("derived wall plans expose footprint validity for every skin", () => {
   assert.equal(result.geometryValidation.b[0].valid, true);
   assert.equal(result.diagnostics.some((item) => item.code === "DERIVED_SKIN_FOOTPRINT_INVALID"), false);
 });
+
+test("reversed baseline directions preserve valid L-junction skin footprints", () => {
+  const project = createProject();
+  project.walls.a = createWall({ id: "a", baseline: [[3000, 0], [0, 0]], thickness: 200, height: 3000 });
+  project.walls.b = createWall({ id: "b", baseline: [[3000, 2000], [3000, 0]], thickness: 200, height: 3000 });
+  const result = deriveProjectPlan(project);
+  assert.equal(result.junctions.length, 1);
+  assert.equal(result.junctions[0].type, "L");
+  assert.equal(result.geometryValidation.a[0].valid, true);
+  assert.equal(result.geometryValidation.b[0].valid, true);
+  assert.equal(result.diagnostics.some((item) => item.code === "DERIVED_SKIN_FOOTPRINT_INVALID"), false);
+});
+
+test("reversed host and branch baselines preserve valid T-junction branch footprint", () => {
+  const project = createProject();
+  project.walls.host = createWall({ id: "host", baseline: [[3000, 0], [0, 0]], thickness: 200, height: 3000 });
+  project.walls.branch = createWall({ id: "branch", baseline: [[1500, 2000], [1500, 0]], thickness: 200, height: 3000 });
+  const result = deriveProjectPlan(project);
+  assert.equal(result.junctions[0].type, "T");
+  assert.equal(result.geometryValidation.host[0].valid, true);
+  assert.equal(result.geometryValidation.branch[0].valid, true);
+});
