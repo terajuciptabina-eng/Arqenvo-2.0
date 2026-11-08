@@ -33,13 +33,13 @@ The current solver is therefore an independent deterministic first-pass geometry
 
 ## Known limitations and next gates
 
-1. The current junction solver handles pairwise straight-segment intersections and applies the resulting cap to per-skin footprints. Multi-wall clusters are detected and deliberately withheld for priority resolution; acute/near-collinear miters are rejected by a configurable miter-ratio limit. Overlap/coincident baselines, wall priorities and complete polygon topology validation remain unimplemented.
+1. The current junction solver handles pairwise straight-segment intersections and applies the resulting cap to per-skin footprints. Multi-wall clusters are detected and deliberately withheld for priority resolution; acute/near-collinear miters are rejected by a configurable miter-ratio limit. Collinear overlaps and endpoint contacts are now detected and blocked, but their priority-based resolution and complete polygon topology validation remain unimplemented.
 2. Composite skin offsets are generated from ordered thicknesses. Profile-based composites, variable skins, finish priority, cut surfaces and material/building-material semantics need more reference evidence.
 3. Opening geometry currently models rectangular through-cuts. Library-part profiles, jamb/reveal/sill geometry, curved-host cut limits and partial-depth cuts remain open.
 4. The adapter contract is defined but no kernel adapter is connected to the application. The BRepJS/OCCT prototype remains isolated in benchmarks.
 5. ProjectStore now invalidates transitive semantic dependents on a committed change. Persistence, autosave and collaboration remain unimplemented.
-6. No browser UI, canvas, 2D/3D viewport or physical iPad Safari test exists yet.
+6. A basic 2D canvas and derived isometric preview exist; a production 3D viewport and physical iPad Safari validation remain outstanding.
 
 ## Acceptance for this slice
 
-Run `node --test tests/unit/*.test.mjs`. CI must pass before this slice is considered merged. The next vertical increment is multi-wall junction resolution, dependency invalidation and a browser-visible wall/door/window editor backed by these semantic records.
+Run `node --test tests/unit/*.test.mjs`. CI must pass before this slice is considered merged. The next vertical increment is evidence-backed wall-priority resolution, robust polygon/topology validation and a kernel-neutral geometry adapter integration plan. The existing browser editor remains a prototype and must not be treated as production-ready.
