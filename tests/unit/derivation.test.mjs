@@ -164,3 +164,34 @@ test("skin-stack topology rejects gaps and mismatched shared boundaries", async 
   mismatch[1].footprint[0][1] += 2;
   assert.equal(validateSkinStack(mismatch).code, "SKIN_SHARED_BOUNDARY_MISMATCH");
 });
+
+
+test("L-junction candidate preserves shared boundaries across every composite skin", () => {
+  const project = createProject();
+  project.composites.c = createComposite({ id: "c", skins: [
+    { id: "outer", thickness: 20, materialId: "render" },
+    { id: "core", thickness: 160, materialId: "concrete" },
+    { id: "inner", thickness: 20, materialId: "plaster" }
+  ] });
+  project.walls.a = createWall({ id: "a", baseline: [[0, 0], [3000, 0]], thickness: 200, height: 3000, compositeId: "c" });
+  project.walls.b = createWall({ id: "b", baseline: [[3000, 0], [3000, 2000]], thickness: 200, height: 3000, compositeId: "c" });
+  const result = deriveProjectPlan(project);
+  assert.equal(result.junctionResolutions[0].status, "ACCEPTED");
+  assert.equal(result.skinStackValidation.a.valid, true);
+  assert.equal(result.skinStackValidation.b.valid, true);
+  assert.equal(result.junctionResolutions[0].skinStackValidation.every((item) => item.valid), true);
+});
+
+test("T-junction candidate preserves shared boundaries across a composite branch", () => {
+  const project = createProject();
+  project.composites.c = createComposite({ id: "c", skins: [
+    { id: "outer", thickness: 30, materialId: "render" },
+    { id: "core", thickness: 140, materialId: "concrete" },
+    { id: "inner", thickness: 30, materialId: "plaster" }
+  ] });
+  project.walls.host = createWall({ id: "host", baseline: [[0, 0], [3000, 0]], thickness: 200, height: 3000 });
+  project.walls.branch = createWall({ id: "branch", baseline: [[1500, 0], [1500, 2000]], thickness: 200, height: 3000, compositeId: "c" });
+  const result = deriveProjectPlan(project);
+  assert.equal(result.junctionResolutions[0].status, "ACCEPTED");
+  assert.equal(result.skinStackValidation.branch.valid, true);
+});
