@@ -4,6 +4,7 @@ import { createProject, createWall } from "../../src/bim/model.mjs";
 import { solveWallJunctions } from "../../src/geometry/junction-solver.mjs";
 import { validateJunctionNetwork } from "../../src/geometry/junction-network-validation.mjs";
 import { deriveProjectPlan } from "../../src/geometry/wall-derivation.mjs";
+import { validateSimplePolygon } from "../../src/geometry/polygon-validation.mjs";
 
 test("network groups two distinct endpoint junctions on the same middle wall", () => {
   const project = createProject();
@@ -51,4 +52,32 @@ test("network component identity and counts are independent of junction order", 
   const reverse = validateJunctionNetwork([...junctions].reverse(), project);
   assert.deepEqual(forward.networks, reverse.networks);
   assert.deepEqual(forward.conflicts, reverse.conflicts);
+});
+
+
+test("multi-junction wall caps and derived geometry are invariant to wall insertion order", () => {
+  const makeProject = (reverse = false) => {
+    const project = createProject();
+    const walls = [
+      createWall({ id: "a", baseline: [[0, 0], [1000, 0]], thickness: 100, height: 3000 }),
+      createWall({ id: "middle", baseline: [[1000, 0], [1000, 1000]], thickness: 100, height: 3000 }),
+      createWall({ id: "c", baseline: [[1000, 1000], [2000, 1000]], thickness: 100, height: 3000 })
+    ];
+    for (const wall of (reverse ? [...walls].reverse() : walls)) project.walls[wall.id] = wall;
+    return project;
+  };
+
+  const forwardProject = makeProject(false);
+  const reverseProject = makeProject(true);
+  const forward = deriveProjectPlan(forwardProject);
+  const reverse = deriveProjectPlan(reverseProject);
+
+  assert.deepEqual(forward.walls, reverse.walls);
+  assert.deepEqual(forward.junctionResolutions, reverse.junctionResolutions);
+  const middle = forward.walls.middle;
+  assert.deepEqual(middle.junctionCaps.map((cap) => cap.endpoint).sort(), ["end", "start"]);
+  assert.equal(middle.skins.length, 1);
+  assert.equal(middle.skins.every((skin) => validateSimplePolygon(skin.footprint).valid), true);
+  assert.equal(forward.skinStackValidation.middle.valid, true);
+  assert.equal(reverse.skinStackValidation.middle.valid, true);
 });
