@@ -50,6 +50,14 @@ The current solver is therefore an independent deterministic first-pass geometry
 - Regression tests cover valid three-skin stacks, offset gaps, shared-boundary mismatch, and L/T junction candidates across composite skins.
 - This is a 2D plan-level adjacency contract. It does not prove absence of 3D internal faces, manifoldness, watertight B-Rep validity or Boolean-union correctness.
 
+## Junction domain validation added 2026-11-08
+
+- Added a generic domain gate before candidate geometry is staged: supported junction type, exactly two distinct existing wall IDs, finite junction point, endpoint identity against the source wall baselines, and geometry structure are checked.
+- L/angled candidates must identify both matching wall endpoints and provide two distinct finite miter points.
+- T candidates must identify exactly one branch endpoint, confirm the junction point lies on the host baseline, and provide a cap tied to the correct host and branch wall IDs.
+- Invalid candidates are reported as `BLOCKED` with a stable reason code and `JUNCTION_DOMAIN_VALIDATION_FAILED`; no candidate plan is mutated.
+- These are generic domain invariants inspired by the staged-validation shape in the evidence dossier. They are not a reconstruction of Graphisoft's proprietary `EndJunctionDomainsTest` or its missing priority decision table.
+
 ## Known limitations and next gates
 
 1. The current junction solver handles pairwise straight-segment intersections and applies candidate caps to per-skin footprints through staged acceptance. Multi-wall clusters are detected and deliberately withheld for priority resolution; acute/near-collinear miters are rejected by a configurable miter-ratio limit. Collinear overlaps and endpoint contacts are detected and blocked. Derived 2D skin footprints are checked for simple-polygon validity, but priority-based resolution, complete multi-polygon topology validation and 3D B-Rep validity remain unimplemented; current skin-stack checks cover only ordered 2D adjacency and Z-range consistency.
