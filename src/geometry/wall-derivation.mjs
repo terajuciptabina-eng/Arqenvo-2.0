@@ -1,7 +1,7 @@
 import { validateComposite, validateOpening, validateWall } from "../bim/model.mjs";
 import { dot, leftNormal, normalize, scale, sub } from "./vector.mjs";
 import { solveWallJunctions } from "./junction-solver.mjs";
-import { validateSimplePolygon } from "./polygon-validation.mjs";
+import { validateSimplePolygon, validateSkinStack } from "./polygon-validation.mjs";
 
 export function deriveWallPlan(wall, composite = null, openings = []) {
   validateWall(wall);
@@ -156,15 +156,21 @@ export function deriveProjectPlan(project, options = {}) {
         ...validateSimplePolygon(skin.footprint, { tolerance: options.polygonTolerance ?? 1e-7 })
       }))
     );
+    const candidateStackValidation = Object.entries(candidatePlans).map(([wallId, plan]) => ({
+      wallId,
+      ...validateSkinStack(plan.skins, { tolerance: options.polygonTolerance ?? 1e-7 })
+    }));
     const invalidCandidate = candidateValidation.find((item) => !item.valid);
-    if (!candidateApplied || invalidCandidate) {
-      const reason = !candidateApplied ? "CANDIDATE_UPDATE_FAILED" : invalidCandidate.code;
+    const invalidStack = candidateStackValidation.find((item) => !item.valid);
+    if (!candidateApplied || invalidCandidate || invalidStack) {
+      const reason = !candidateApplied ? "CANDIDATE_UPDATE_FAILED" : invalidCandidate?.code ?? invalidStack.code;
       junctionResolutions.push({
         junctionId: junction.id,
         status: "REJECTED",
         reason,
         affectedWallIds: Object.keys(candidatePlans).sort(),
-        validation: candidateValidation
+        validation: candidateValidation,
+        skinStackValidation: candidateStackValidation
       });
       diagnostics.push({
         code: "JUNCTION_CANDIDATE_REJECTED",
@@ -180,11 +186,22 @@ export function deriveProjectPlan(project, options = {}) {
       junctionId: junction.id,
       status: "ACCEPTED",
       affectedWallIds: Object.keys(candidatePlans).sort(),
-      validation: candidateValidation
+      validation: candidateValidation,
+      skinStackValidation: candidateStackValidation
     });
   }
   const geometryValidation = {};
+  const skinStackValidation = {};
   for (const [wallId, plan] of Object.entries(plans)) {
+    skinStackValidation[wallId] = validateSkinStack(plan.skins, { tolerance: options.polygonTolerance ?? 1e-7 });
+    if (!skinStackValidation[wallId].valid) {
+      diagnostics.push({
+        code: "DERIVED_SKIN_STACK_INVALID",
+        wallId,
+        reason: skinStackValidation[wallId].code,
+        details: skinStackValidation[wallId]
+      });
+    }
     geometryValidation[wallId] = plan.skins.map((skin) => {
       const validation = validateSimplePolygon(skin.footprint, { tolerance: options.polygonTolerance ?? 1e-7 });
       if (!validation.valid) {
@@ -199,5 +216,5 @@ export function deriveProjectPlan(project, options = {}) {
       return { skinId: skin.id, ...validation };
     });
   }
-  return { walls: plans, junctions: junctionResult.junctions, junctionResolutions, diagnostics, geometryValidation };
+  return { walls: plans, junctions: junctionResult.junctions, junctionResolutions, diagnostics, geometryValidation, skinStackValidation };
 }
