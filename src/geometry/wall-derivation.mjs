@@ -1,6 +1,7 @@
 import { validateComposite, validateOpening, validateWall } from "../bim/model.mjs";
 import { dot, leftNormal, normalize, scale, sub } from "./vector.mjs";
 import { solveWallJunctions } from "./junction-solver.mjs";
+import { validateSimplePolygon } from "./polygon-validation.mjs";
 
 export function deriveWallPlan(wall, composite = null, openings = []) {
   validateWall(wall);
@@ -132,5 +133,22 @@ export function deriveProjectPlan(project, options = {}) {
       applyEndpointCap(plans[branchId], branch, endpoint, junction.geometry.cap);
     }
   }
-  return { walls: plans, junctions: junctionResult.junctions, diagnostics: junctionResult.diagnostics };
+  const geometryValidation = {};
+  const diagnostics = [...junctionResult.diagnostics];
+  for (const [wallId, plan] of Object.entries(plans)) {
+    geometryValidation[wallId] = plan.skins.map((skin) => {
+      const validation = validateSimplePolygon(skin.footprint, { tolerance: options.polygonTolerance ?? 1e-7 });
+      if (!validation.valid) {
+        diagnostics.push({
+          code: "DERIVED_SKIN_FOOTPRINT_INVALID",
+          wallId,
+          skinId: skin.id,
+          reason: validation.code,
+          details: validation
+        });
+      }
+      return { skinId: skin.id, ...validation };
+    });
+  }
+  return { walls: plans, junctions: junctionResult.junctions, diagnostics, geometryValidation };
 }
