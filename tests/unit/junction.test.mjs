@@ -60,3 +60,39 @@ test("near-parallel L junction is rejected when its miter exceeds the safety rat
   assert.equal(result.junctions[0].geometry, null);
   assert.ok(result.diagnostics.some((item) => item.code === "MITER_LIMIT_EXCEEDED"));
 });
+
+test("collinear end-to-end walls are detected and deferred for priority resolution", () => {
+  const walls = [
+    createWall({ id: "a", baseline: [[0, 0], [3000, 0]], thickness: 200, height: 3000 }),
+    createWall({ id: "b", baseline: [[3000, 0], [5000, 0]], thickness: 200, height: 3000 })
+  ];
+  const result = solveWallJunctions(walls);
+  assert.equal(result.junctions.length, 1);
+  assert.equal(result.junctions[0].type, "STRAIGHT");
+  assert.equal(result.junctions[0].operation, "priority-resolution-required");
+  assert.deepEqual(result.junctions[0].point, [3000, 0]);
+  assert.ok(result.diagnostics.some((item) => item.code === "STRAIGHT_WALL_JOIN_REQUIRES_PRIORITY_RESOLUTION"));
+});
+
+test("collinear overlapping wall baselines are detected rather than silently ignored", () => {
+  const walls = [
+    createWall({ id: "a", baseline: [[0, 0], [3000, 0]], thickness: 200, height: 3000 }),
+    createWall({ id: "b", baseline: [[1500, 0], [4000, 0]], thickness: 200, height: 3000 })
+  ];
+  const result = solveWallJunctions(walls);
+  assert.equal(result.junctions.length, 1);
+  assert.equal(result.junctions[0].type, "COLLINEAR_OVERLAP");
+  assert.equal(result.junctions[0].overlap.length, 1500);
+  assert.equal(result.junctions[0].operation, "manual-review");
+  assert.ok(result.diagnostics.some((item) => item.code === "COLLINEAR_WALL_BASELINES_OVERLAP"));
+});
+
+test("parallel non-collinear wall baselines are not reported as junctions", () => {
+  const walls = [
+    createWall({ id: "a", baseline: [[0, 0], [3000, 0]], thickness: 200, height: 3000 }),
+    createWall({ id: "b", baseline: [[0, 500], [3000, 500]], thickness: 200, height: 3000 })
+  ];
+  const result = solveWallJunctions(walls);
+  assert.equal(result.junctions.length, 0);
+  assert.equal(result.diagnostics.length, 0);
+});
