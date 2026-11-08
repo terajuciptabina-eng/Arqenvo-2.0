@@ -109,3 +109,28 @@ test("reversed host and branch baselines preserve valid T-junction branch footpr
   assert.equal(result.geometryValidation.host[0].valid, true);
   assert.equal(result.geometryValidation.branch[0].valid, true);
 });
+
+
+test("junction candidates are accepted only after every affected skin validates", () => {
+  const project = createProject();
+  project.walls.a = createWall({ id: "a", baseline: [[0, 0], [3000, 0]], thickness: 200, height: 3000 });
+  project.walls.b = createWall({ id: "b", baseline: [[3000, 0], [3000, 2000]], thickness: 200, height: 3000 });
+  const result = deriveProjectPlan(project);
+  assert.equal(result.junctionResolutions.length, 1);
+  assert.equal(result.junctionResolutions[0].status, "ACCEPTED");
+  assert.deepEqual(result.junctionResolutions[0].affectedWallIds, ["a", "b"]);
+  assert.equal(result.junctionResolutions[0].validation.every((item) => item.valid), true);
+});
+
+test("unsupported cross and multi-wall junctions are blocked without mutating wall plans", () => {
+  const project = createProject();
+  project.walls.a = createWall({ id: "a", baseline: [[-1500, 0], [1500, 0]], thickness: 200, height: 3000 });
+  project.walls.b = createWall({ id: "b", baseline: [[0, -1500], [0, 1500]], thickness: 200, height: 3000 });
+  const result = deriveProjectPlan(project);
+  assert.equal(result.junctionResolutions[0].status, "BLOCKED");
+  assert.equal(result.junctionResolutions[0].reason, "NO_CANDIDATE_GEOMETRY");
+  assert.equal(result.walls.a.junctionCaps, undefined);
+  assert.equal(result.walls.b.junctionCaps, undefined);
+  assert.equal(result.geometryValidation.a[0].valid, true);
+  assert.equal(result.geometryValidation.b[0].valid, true);
+});
