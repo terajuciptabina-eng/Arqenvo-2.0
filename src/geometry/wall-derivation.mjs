@@ -119,22 +119,71 @@ export function deriveProjectPlan(project, options = {}) {
     const openings = Object.values(project.openings ?? {}).filter((opening) => opening.hostWallId === wall.id);
     return [wall.id, deriveWallPlan(wall, composite, openings)];
   }));
+  const junctionResolutions = [];
+  const diagnostics = [...junctionResult.diagnostics];
   for (const junction of junctionResult.junctions) {
-    if (!junction.geometry) continue;
+    const supportedType = ["L", "ANGLED", "T"].includes(junction.type);
+    if (!junction.geometry || !supportedType) {
+      junctionResolutions.push({
+        junctionId: junction.id,
+        status: "BLOCKED",
+        reason: !junction.geometry ? "NO_CANDIDATE_GEOMETRY" : "UNSUPPORTED_JUNCTION_TYPE",
+        affectedWallIds: [...junction.wallIds]
+      });
+      continue;
+    }
+
+    const candidatePlans = {};
+    let candidateApplied = true;
     if (junction.type === "L" || junction.type === "ANGLED") {
-      const wallA = project.walls[junction.wallIds[0]];
-      const wallB = project.walls[junction.wallIds[1]];
-      applyEndpointCap(plans[wallA.id], wallA, junction.endpointA, [junction.geometry.outer, junction.geometry.inner]);
-      applyEndpointCap(plans[wallB.id], wallB, junction.endpointB, [junction.geometry.outer, junction.geometry.inner]);
-    } else if (junction.type === "T") {
+      const [wallAId, wallBId] = junction.wallIds;
+      candidatePlans[wallAId] = structuredClone(plans[wallAId]);
+      candidatePlans[wallBId] = structuredClone(plans[wallBId]);
+      candidateApplied =
+        applyEndpointCap(candidatePlans[wallAId], project.walls[wallAId], junction.endpointA, [junction.geometry.outer, junction.geometry.inner]) &&
+        applyEndpointCap(candidatePlans[wallBId], project.walls[wallBId], junction.endpointB, [junction.geometry.outer, junction.geometry.inner]);
+    } else {
       const branchId = junction.endpointA ? junction.wallIds[0] : junction.wallIds[1];
       const endpoint = junction.endpointA ?? junction.endpointB;
-      const branch = project.walls[branchId];
-      applyEndpointCap(plans[branchId], branch, endpoint, junction.geometry.cap);
+      candidatePlans[branchId] = structuredClone(plans[branchId]);
+      candidateApplied = applyEndpointCap(candidatePlans[branchId], project.walls[branchId], endpoint, junction.geometry.cap);
     }
+
+    const candidateValidation = Object.entries(candidatePlans).flatMap(([wallId, plan]) =>
+      plan.skins.map((skin) => ({
+        wallId,
+        skinId: skin.id,
+        ...validateSimplePolygon(skin.footprint, { tolerance: options.polygonTolerance ?? 1e-7 })
+      }))
+    );
+    const invalidCandidate = candidateValidation.find((item) => !item.valid);
+    if (!candidateApplied || invalidCandidate) {
+      const reason = !candidateApplied ? "CANDIDATE_UPDATE_FAILED" : invalidCandidate.code;
+      junctionResolutions.push({
+        junctionId: junction.id,
+        status: "REJECTED",
+        reason,
+        affectedWallIds: Object.keys(candidatePlans).sort(),
+        validation: candidateValidation
+      });
+      diagnostics.push({
+        code: "JUNCTION_CANDIDATE_REJECTED",
+        junctionId: junction.id,
+        reason,
+        affectedWallIds: Object.keys(candidatePlans).sort()
+      });
+      continue;
+    }
+
+    for (const [wallId, candidatePlan] of Object.entries(candidatePlans)) plans[wallId] = candidatePlan;
+    junctionResolutions.push({
+      junctionId: junction.id,
+      status: "ACCEPTED",
+      affectedWallIds: Object.keys(candidatePlans).sort(),
+      validation: candidateValidation
+    });
   }
   const geometryValidation = {};
-  const diagnostics = [...junctionResult.diagnostics];
   for (const [wallId, plan] of Object.entries(plans)) {
     geometryValidation[wallId] = plan.skins.map((skin) => {
       const validation = validateSimplePolygon(skin.footprint, { tolerance: options.polygonTolerance ?? 1e-7 });
@@ -150,5 +199,5 @@ export function deriveProjectPlan(project, options = {}) {
       return { skinId: skin.id, ...validation };
     });
   }
-  return { walls: plans, junctions: junctionResult.junctions, diagnostics, geometryValidation };
+  return { walls: plans, junctions: junctionResult.junctions, junctionResolutions, diagnostics, geometryValidation };
 }
