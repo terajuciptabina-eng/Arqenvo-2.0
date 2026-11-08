@@ -108,10 +108,13 @@ export function solveWallJunctions(walls, options = {}) {
   const maxMiterRatio = options.maxMiterRatio ?? 10;
   const junctions = [];
   const diagnostics = [];
-  for (let i = 0; i < walls.length; i += 1) {
-    for (let j = i + 1; j < walls.length; j += 1) {
-      const a = walls[i];
-      const b = walls[j];
+  // Canonical pair order keeps wallIds aligned with endpointA/endpointB and
+  // makes candidate geometry independent of project object insertion order.
+  const orderedWalls = [...walls].sort((a, b) => a.id.localeCompare(b.id));
+  for (let i = 0; i < orderedWalls.length; i += 1) {
+    for (let j = i + 1; j < orderedWalls.length; j += 1) {
+      const a = orderedWalls[i];
+      const b = orderedWalls[j];
       const hit = segmentIntersection(a.baseline[0], a.baseline[1], b.baseline[0], b.baseline[1], epsilon);
       if (!hit) {
         const collinear = collinearRelationship(...a.baseline, ...b.baseline, tolerance, epsilon);
