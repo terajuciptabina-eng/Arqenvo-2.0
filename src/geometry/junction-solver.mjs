@@ -116,7 +116,7 @@ export function solveWallJunctions(walls, options = {}) {
       if (!hit) {
         const collinear = collinearRelationship(...a.baseline, ...b.baseline, tolerance, epsilon);
         if (!collinear) continue;
-        const id = `junction:${a.id}:${b.id}`;
+        const id = `junction:${[a.id, b.id].sort().join(":")}`;
         if (collinear.type === "COLLINEAR_OVERLAP") {
           junctions.push({
             id, type: "COLLINEAR_OVERLAP", wallIds: [a.id, b.id],
@@ -162,7 +162,7 @@ export function solveWallJunctions(walls, options = {}) {
         geometry = tCap(branch, endA ? endA : endB, host, hit.point, epsilon);
       }
       const junction = {
-        id: `junction:${a.id}:${b.id}`,
+        id: `junction:${[a.id, b.id].sort().join(":")}`,
         type,
         wallIds: [a.id, b.id],
         point: hit.point,
