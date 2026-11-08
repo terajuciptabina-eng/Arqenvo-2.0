@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createComposite, createOpening, createWall, createProject } from "../../src/bim/model.mjs";
 import { deriveProjectPlan, deriveWallPlan } from "../../src/geometry/wall-derivation.mjs";
+import { validateSimplePolygon } from "../../src/geometry/polygon-validation.mjs";
 
 test("three-skin wall derives ordered material-preserving prisms", () => {
   const wall = createWall({ id: "w", baseline: [[0, 0], [1000, 0]], thickness: 200, height: 3000, baseElevation: 100 });
@@ -55,4 +56,34 @@ test("project derivation trims a T branch but preserves its host wall baseline",
   assert.equal(result.junctions[0].type, "T");
   assert.equal(result.walls.host.junctionCaps, undefined);
   assert.equal(result.walls.branch.junctionCaps.length, 1);
+});
+
+test("simple polygon validation accepts a rectangular wall footprint", () => {
+  const result = validateSimplePolygon([[0, 0], [1000, 0], [1000, 200], [0, 200]]);
+  assert.equal(result.valid, true);
+  assert.equal(result.area, 200000);
+  assert.equal(result.winding, "counterclockwise");
+});
+
+test("simple polygon validation rejects a self-intersecting footprint", () => {
+  const result = validateSimplePolygon([[0, 0], [4, 4], [0, 4], [3, 0]]);
+  assert.equal(result.valid, false);
+  assert.equal(result.code, "POLYGON_SELF_INTERSECTION");
+});
+
+test("simple polygon validation rejects zero-length edges and non-finite coordinates", () => {
+  assert.equal(validateSimplePolygon([[0, 0], [0, 0], [1, 1]]).code, "POLYGON_ZERO_LENGTH_EDGE");
+  assert.equal(validateSimplePolygon([[0, 0], [1, 0], [0, Number.NaN]]).code, "POLYGON_POINT_NOT_FINITE");
+});
+
+test("derived wall plans expose footprint validity for every skin", () => {
+  const project = createProject();
+  project.walls.a = createWall({ id: "a", baseline: [[0, 0], [3000, 0]], thickness: 200, height: 3000 });
+  project.walls.b = createWall({ id: "b", baseline: [[3000, 0], [3000, 2000]], thickness: 200, height: 3000 });
+  const result = deriveProjectPlan(project);
+  assert.equal(result.geometryValidation.a.length, 1);
+  assert.equal(result.geometryValidation.b.length, 1);
+  assert.equal(result.geometryValidation.a[0].valid, true);
+  assert.equal(result.geometryValidation.b[0].valid, true);
+  assert.equal(result.diagnostics.some((item) => item.code === "DERIVED_SKIN_FOOTPRINT_INVALID"), false);
 });
