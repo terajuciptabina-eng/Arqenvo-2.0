@@ -17,6 +17,46 @@ function segmentIntersection(a, b, c, d, epsilon) {
   return { point: add(a, scale(r, t)), t, u };
 }
 
+function collinearRelationship(a, b, c, d, tolerance, epsilon) {
+  const axis = sub(b, a);
+  const axisLength = Math.hypot(axis[0], axis[1]);
+  const unit = scale(axis, 1 / axisLength);
+  const distanceC = Math.abs(cross(unit, sub(c, a)));
+  const distanceD = Math.abs(cross(unit, sub(d, a)));
+  if (distanceC > tolerance || distanceD > tolerance) return null;
+
+  const projectionC = (c[0] - a[0]) * unit[0] + (c[1] - a[1]) * unit[1];
+  const projectionD = (d[0] - a[0]) * unit[0] + (d[1] - a[1]) * unit[1];
+  const overlapStart = Math.max(0, Math.min(projectionC, projectionD));
+  const overlapEnd = Math.min(axisLength, Math.max(projectionC, projectionD));
+  if (overlapEnd < overlapStart - tolerance) return null;
+
+  if (overlapEnd - overlapStart > tolerance) {
+    return {
+      type: "COLLINEAR_OVERLAP",
+      intervalA: [overlapStart, overlapEnd],
+      intervalB: [projectionC, projectionD],
+      overlapLength: overlapEnd - overlapStart
+    };
+  }
+
+  const point = add(a, scale(unit, (overlapStart + overlapEnd) / 2));
+  const endpointA = endpointAt({ baseline: [a, b] }, point, tolerance);
+  const endpointB = endpointAt({ baseline: [c, d] }, point, tolerance);
+  return {
+    type: endpointA && endpointB ? "STRAIGHT" : "COLLINEAR_TOUCH",
+    point,
+    endpointA,
+    endpointB,
+    parameters: {
+      tA: (point[0] - a[0]) * unit[0] / axisLength + (point[1] - a[1]) * unit[1] / axisLength,
+      tB: Math.hypot(d[0] - c[0], d[1] - c[1]) > epsilon
+        ? ((point[0] - c[0]) * (d[0] - c[0]) + (point[1] - c[1]) * (d[1] - c[1])) / ((d[0] - c[0]) ** 2 + (d[1] - c[1]) ** 2)
+        : 0
+    }
+  };
+}
+
 function rayFromEndpoint(wall, endpoint) {
   const direction = normalize(sub(wall.baseline[1], wall.baseline[0]));
   return endpoint === "start" ? direction : scale(direction, -1);
@@ -73,7 +113,31 @@ export function solveWallJunctions(walls, options = {}) {
       const a = walls[i];
       const b = walls[j];
       const hit = segmentIntersection(a.baseline[0], a.baseline[1], b.baseline[0], b.baseline[1], epsilon);
-      if (!hit) continue;
+      if (!hit) {
+        const collinear = collinearRelationship(...a.baseline, ...b.baseline, tolerance, epsilon);
+        if (!collinear) continue;
+        const id = `junction:${a.id}:${b.id}`;
+        if (collinear.type === "COLLINEAR_OVERLAP") {
+          junctions.push({
+            id, type: "COLLINEAR_OVERLAP", wallIds: [a.id, b.id],
+            geometry: null, operation: "manual-review",
+            overlap: { intervalA: collinear.intervalA, intervalB: collinear.intervalB, length: collinear.overlapLength }
+          });
+          diagnostics.push({ code: "COLLINEAR_WALL_BASELINES_OVERLAP", junctionId: id, wallIds: [a.id, b.id], overlapLength: collinear.overlapLength });
+        } else {
+          junctions.push({
+            id, type: collinear.type, wallIds: [a.id, b.id],
+            point: collinear.point, endpointA: collinear.endpointA, endpointB: collinear.endpointB,
+            parameters: collinear.parameters, geometry: null,
+            operation: "priority-resolution-required"
+          });
+          diagnostics.push({
+            code: collinear.type === "STRAIGHT" ? "STRAIGHT_WALL_JOIN_REQUIRES_PRIORITY_RESOLUTION" : "COLLINEAR_ENDPOINT_TOUCH_REQUIRES_PRIORITY_RESOLUTION",
+            junctionId: id, wallIds: [a.id, b.id], point: collinear.point
+          });
+        }
+        continue;
+      }
       const endA = endpointAt(a, hit.point, tolerance);
       const endB = endpointAt(b, hit.point, tolerance);
       const endpointCount = Number(Boolean(endA)) + Number(Boolean(endB));
@@ -114,6 +178,7 @@ export function solveWallJunctions(walls, options = {}) {
   }
   const clusters = [];
   for (const junction of junctions) {
+    if (!junction.point) continue;
     let cluster = clusters.find((item) => distance(item.point, junction.point) <= tolerance);
     if (!cluster) {
       cluster = { point: junction.point, items: [] };
@@ -122,23 +187,21 @@ export function solveWallJunctions(walls, options = {}) {
     cluster.items.push(junction);
   }
   const resolvedJunctions = [];
+  const clustered = new Set();
   for (const cluster of clusters) {
     const wallIds = [...new Set(cluster.items.flatMap((item) => item.wallIds))].sort();
     if (wallIds.length > 2) {
       const id = `junction:cluster:${wallIds.join(":")}`;
       resolvedJunctions.push({
-        id,
-        type: "MULTI_WALL",
-        wallIds,
-        point: cluster.point,
-        geometry: null,
-        operation: "manual-review",
-        pairCount: cluster.items.length
+        id, type: "MULTI_WALL", wallIds, point: cluster.point,
+        geometry: null, operation: "manual-review", pairCount: cluster.items.length
       });
       diagnostics.push({ code: "MULTI_WALL_CLUSTER_REQUIRES_PRIORITY_RESOLUTION", junctionId: id, wallIds });
-    } else {
-      resolvedJunctions.push(...cluster.items);
+      for (const item of cluster.items) clustered.add(item);
     }
+  }
+  for (const junction of junctions) {
+    if (!clustered.has(junction)) resolvedJunctions.push(junction);
   }
   return { junctions: resolvedJunctions, diagnostics, tolerance, maxMiterRatio };
 }
