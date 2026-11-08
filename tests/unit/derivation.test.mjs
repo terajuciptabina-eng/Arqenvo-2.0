@@ -134,3 +134,33 @@ test("unsupported cross and multi-wall junctions are blocked without mutating wa
   assert.equal(result.geometryValidation.a[0].valid, true);
   assert.equal(result.geometryValidation.b[0].valid, true);
 });
+
+
+test("skin-stack topology accepts contiguous skins with shared boundaries", async () => {
+  const wall = createWall({ id: "stack", baseline: [[0, 0], [2000, 0]], thickness: 200, height: 3000 });
+  const composite = createComposite({ id: "stack-composite", skins: [
+    { id: "finish-a", thickness: 25, materialId: "render" },
+    { id: "core", thickness: 150, materialId: "concrete" },
+    { id: "finish-b", thickness: 25, materialId: "plaster" }
+  ] });
+  const result = deriveWallPlan(wall, composite);
+  const { validateSkinStack } = await import("../../src/geometry/polygon-validation.mjs");
+  assert.deepEqual(validateSkinStack(result.skins), { valid: true, skinCount: 3 });
+});
+
+test("skin-stack topology rejects gaps and mismatched shared boundaries", async () => {
+  const { validateSkinStack } = await import("../../src/geometry/polygon-validation.mjs");
+  const wall = createWall({ id: "stack", baseline: [[0, 0], [2000, 0]], thickness: 200, height: 3000 });
+  const composite = createComposite({ id: "stack-composite", skins: [
+    { id: "finish-a", thickness: 25, materialId: "render" },
+    { id: "core", thickness: 150, materialId: "concrete" },
+    { id: "finish-b", thickness: 25, materialId: "plaster" }
+  ] });
+  const skins = deriveWallPlan(wall, composite).skins;
+  const gap = structuredClone(skins);
+  gap[1].offsetRange[0] += 1;
+  assert.equal(validateSkinStack(gap).code, "SKIN_OFFSET_GAP_OR_OVERLAP");
+  const mismatch = structuredClone(skins);
+  mismatch[1].footprint[0][1] += 2;
+  assert.equal(validateSkinStack(mismatch).code, "SKIN_SHARED_BOUNDARY_MISMATCH");
+});
