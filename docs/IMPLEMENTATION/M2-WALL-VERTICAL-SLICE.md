@@ -66,6 +66,13 @@ The current solver is therefore an independent deterministic first-pass geometry
 - Network membership and summary ordering are deterministic under junction input reordering.
 - This validates endpoint ownership and graph connectivity only. It does not solve multi-wall priority, simultaneous multi-junction trimming, 3D union topology, or Graphisoft's proprietary domain tests.
 
+## Multi-junction order determinism added 2026-11-08
+
+- A regression test comparing a three-wall chain under forward and reversed project wall insertion exposed a real defect: pair discovery order changed wallIds order while endpointA/endpointB remained positional, which could apply a cap to the wrong endpoint.
+- The junction solver now sorts walls by stable wall ID before pair generation. This keeps each candidate's wall IDs, endpoint identities and geometry aligned, and makes the derived wall plans deterministic for the same semantic project regardless of object insertion order.
+- The regression asserts equal derived plans and junction resolutions, both caps retained on the shared middle wall, and valid final skin polygon/stack results.
+- This is deterministic pair discovery and staged endpoint application. It does not establish correctness of multi-wall priority, concurrent network geometry, 3D solid topology or Archicad parity.
+
 ## Known limitations and next gates
 
 1. The current junction solver handles pairwise straight-segment intersections and applies candidate caps to per-skin footprints through staged acceptance. Multi-wall clusters are detected and deliberately withheld for priority resolution; acute/near-collinear miters are rejected by a configurable miter-ratio limit. Collinear overlaps and endpoint contacts are detected and blocked. Derived 2D skin footprints are checked for simple-polygon validity, but priority-based resolution, complete multi-polygon topology validation and 3D B-Rep validity remain unimplemented; current skin-stack checks cover only ordered 2D adjacency and Z-range consistency.
