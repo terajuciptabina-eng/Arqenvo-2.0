@@ -42,9 +42,17 @@ The current solver is therefore an independent deterministic first-pass geometry
 - Junction types without supported candidate geometry—including cross and multi-wall cases—remain blocked rather than silently changing geometry.
 - This is atomic acceptance at the derived-plan level. It does not yet implement persistent semantic wall-end updates, full domain tests, solid topology checks or Graphisoft priority rules.
 
+## Composite skin-stack topology checks added 2026-11-08
+
+- Added an ordered skin-stack validator for per-skin footprint validity, contiguous offset ranges, consistent vertical extents and coincident shared boundaries between adjacent skins.
+- Junction candidate acceptance now validates the entire affected skin stack as well as each individual footprint before publishing any candidate plan.
+- Final project derivation reports `skinStackValidation` per wall and emits `DERIVED_SKIN_STACK_INVALID` when the adjacency contract fails.
+- Regression tests cover valid three-skin stacks, offset gaps, shared-boundary mismatch, and L/T junction candidates across composite skins.
+- This is a 2D plan-level adjacency contract. It does not prove absence of 3D internal faces, manifoldness, watertight B-Rep validity or Boolean-union correctness.
+
 ## Known limitations and next gates
 
-1. The current junction solver handles pairwise straight-segment intersections and applies candidate caps to per-skin footprints through staged acceptance. Multi-wall clusters are detected and deliberately withheld for priority resolution; acute/near-collinear miters are rejected by a configurable miter-ratio limit. Collinear overlaps and endpoint contacts are detected and blocked. Derived 2D skin footprints are checked for simple-polygon validity, but priority-based resolution, complete multi-polygon topology validation and 3D B-Rep validity remain unimplemented.
+1. The current junction solver handles pairwise straight-segment intersections and applies candidate caps to per-skin footprints through staged acceptance. Multi-wall clusters are detected and deliberately withheld for priority resolution; acute/near-collinear miters are rejected by a configurable miter-ratio limit. Collinear overlaps and endpoint contacts are detected and blocked. Derived 2D skin footprints are checked for simple-polygon validity, but priority-based resolution, complete multi-polygon topology validation and 3D B-Rep validity remain unimplemented; current skin-stack checks cover only ordered 2D adjacency and Z-range consistency.
 2. Composite skin offsets are generated from ordered thicknesses. Profile-based composites, variable skins, finish priority, cut surfaces and material/building-material semantics need more reference evidence.
 3. Opening geometry currently models rectangular through-cuts. Library-part profiles, jamb/reveal/sill geometry, curved-host cut limits and partial-depth cuts remain open.
 4. The adapter contract is defined but no kernel adapter is connected to the application. The BRepJS/OCCT prototype remains isolated in benchmarks.
