@@ -32,9 +32,19 @@ The current solver is therefore an independent deterministic first-pass geometry
 - Parallel non-collinear baselines remain non-junctions.
 - Regression coverage was added for straight joins, overlapping baselines and separated parallel walls. These checks detect relationships; they do not resolve Archicad wall priority or produce final joined solids.
 
+## Staged junction candidate acceptance added 2026-11-08
+
+- Junction geometry is now treated as a candidate update, not an immediate mutation of the derived wall plans.
+- L/angled candidates are staged against cloned plans for both affected walls; T candidates are staged against the branch wall.
+- Every affected skin footprint is validated before any staged plan is published.
+- If an update cannot be applied or any candidate skin is invalid, the entire candidate is rejected and the previously accepted plans remain unchanged.
+- The derivation result exposes `junctionResolutions` entries with `ACCEPTED`, `REJECTED` or `BLOCKED`, affected wall IDs, reason codes and candidate validation results.
+- Junction types without supported candidate geometry—including cross and multi-wall cases—remain blocked rather than silently changing geometry.
+- This is atomic acceptance at the derived-plan level. It does not yet implement persistent semantic wall-end updates, full domain tests, solid topology checks or Graphisoft priority rules.
+
 ## Known limitations and next gates
 
-1. The current junction solver handles pairwise straight-segment intersections and applies the resulting cap to per-skin footprints. Multi-wall clusters are detected and deliberately withheld for priority resolution; acute/near-collinear miters are rejected by a configurable miter-ratio limit. Collinear overlaps and endpoint contacts are now detected and blocked. Derived 2D skin footprints are checked for simple-polygon validity, but priority-based resolution, complete multi-polygon topology validation and 3D B-Rep validity remain unimplemented.
+1. The current junction solver handles pairwise straight-segment intersections and applies candidate caps to per-skin footprints through staged acceptance. Multi-wall clusters are detected and deliberately withheld for priority resolution; acute/near-collinear miters are rejected by a configurable miter-ratio limit. Collinear overlaps and endpoint contacts are detected and blocked. Derived 2D skin footprints are checked for simple-polygon validity, but priority-based resolution, complete multi-polygon topology validation and 3D B-Rep validity remain unimplemented.
 2. Composite skin offsets are generated from ordered thicknesses. Profile-based composites, variable skins, finish priority, cut surfaces and material/building-material semantics need more reference evidence.
 3. Opening geometry currently models rectangular through-cuts. Library-part profiles, jamb/reveal/sill geometry, curved-host cut limits and partial-depth cuts remain open.
 4. The adapter contract is defined but no kernel adapter is connected to the application. The BRepJS/OCCT prototype remains isolated in benchmarks.
@@ -43,4 +53,4 @@ The current solver is therefore an independent deterministic first-pass geometry
 
 ## Acceptance for this slice
 
-Run `node --test tests/unit/*.test.mjs`. CI must pass before this slice is considered merged. The next vertical increment is evidence-backed wall-priority resolution, robust polygon/topology validation and a kernel-neutral geometry adapter integration plan. The existing browser editor remains a prototype and must not be treated as production-ready.
+Run `node --test tests/unit/*.test.mjs`. CI must pass before this slice is considered merged. The next vertical increment is deeper evidence-backed junction eligibility/domain validation, robust multi-polygon topology validation and a kernel-neutral geometry adapter integration plan. The existing browser editor remains a prototype and must not be treated as production-ready.
