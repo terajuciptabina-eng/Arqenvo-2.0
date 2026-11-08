@@ -14,6 +14,7 @@
 - Kernel adapter contract that keeps vendor-specific types outside the BIM domain.
 - Atomic project transactions with undo/redo.
 - Dependency graph: composite changes invalidate dependent walls; wall changes invalidate hosted openings and connected junction peers; opening edits invalidate the host wall representation.
+- Simple 2D skin-footprint validation for finite coordinates, non-zero edges/area and self-intersection, reported per wall skin during project derivation.
 - Node built-in unit tests and GitHub Actions CI.
 
 ## Evidence boundary
@@ -33,7 +34,7 @@ The current solver is therefore an independent deterministic first-pass geometry
 
 ## Known limitations and next gates
 
-1. The current junction solver handles pairwise straight-segment intersections and applies the resulting cap to per-skin footprints. Multi-wall clusters are detected and deliberately withheld for priority resolution; acute/near-collinear miters are rejected by a configurable miter-ratio limit. Collinear overlaps and endpoint contacts are now detected and blocked, but their priority-based resolution and complete polygon topology validation remain unimplemented.
+1. The current junction solver handles pairwise straight-segment intersections and applies the resulting cap to per-skin footprints. Multi-wall clusters are detected and deliberately withheld for priority resolution; acute/near-collinear miters are rejected by a configurable miter-ratio limit. Collinear overlaps and endpoint contacts are now detected and blocked. Derived 2D skin footprints are checked for simple-polygon validity, but priority-based resolution, complete multi-polygon topology validation and 3D B-Rep validity remain unimplemented.
 2. Composite skin offsets are generated from ordered thicknesses. Profile-based composites, variable skins, finish priority, cut surfaces and material/building-material semantics need more reference evidence.
 3. Opening geometry currently models rectangular through-cuts. Library-part profiles, jamb/reveal/sill geometry, curved-host cut limits and partial-depth cuts remain open.
 4. The adapter contract is defined but no kernel adapter is connected to the application. The BRepJS/OCCT prototype remains isolated in benchmarks.
